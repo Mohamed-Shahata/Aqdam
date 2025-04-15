@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from "react-router-dom"
 import { Box, Button, FormControl, FormLabel, Heading, Input, Text, useColorModeValue, useToast } from "@chakra-ui/react"
 import Cookies from "js-cookie"
-import axios from "axios"
+import api from "../api"
 
 function VerifyCode() {
   const [code, setCode] = useState('');
@@ -13,7 +13,7 @@ function VerifyCode() {
 
   const handlerSubmit = async (e) => {
     e.preventDefault();
-    const email = Cookies.get('registerEmail')
+    const email = Cookies.get('registerEmail');
     if (!email) {
       toast({
         title: "Error",
@@ -27,7 +27,7 @@ function VerifyCode() {
     };
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_DOMAIN}/api/auth/verify-code`, {
+      const response = await api.post(`/auth/verify-code`, {
         email, code
       });
 

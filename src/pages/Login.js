@@ -3,7 +3,7 @@ import { AuthContext } from '../AuthContext';
 import { Box, Button, FormControl, FormLabel, Heading, Input, Text, Link, useColorModeValue, useToast } from '@chakra-ui/react'
 import React, { useState } from 'react'
 import { Link as RouterLink, useNavigate } from "react-router-dom"
-import axios from "axios"
+import api from "../api"
 
 
 function Login() {
@@ -22,7 +22,7 @@ function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await axios.post(`${process.env.REACT_APP_DOMAIN}/api/auth/login`, {
+      const response = await api.post(`/auth/login`, {
         email, password
       });
 

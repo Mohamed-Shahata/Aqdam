@@ -1,14 +1,14 @@
 import { Box, Button, FormControl, FormLabel, Heading, Input, Text, Link, useColorModeValue, useToast } from '@chakra-ui/react'
-import axios from 'axios';
 import React, { useState } from 'react'
 import { Link as RouterLink, useNavigate } from "react-router-dom"
 import Cookies from "js-cookie"
+import api from "../api"
 
 function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [age, setAge] = useState(12);
+  const [age, setAge] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ function Register() {
 
     setIsLoading(true);
     try {
-      const response = await axios.post(`${process.env.REACT_APP_DOMAIN}/api/auth/register`, {
+      const response = await api.post(`/auth/register`, {
         firstName, lastName, age, email, password
       });
 
@@ -88,7 +88,7 @@ function Register() {
           <Input
             type="number"
             value={age}
-            onChange={(e) => setAge(e.target.value)}
+            onChange={(e) => setAge(Number(e.target.value))}
             placeholder='Enter your age please'
             required
           />
