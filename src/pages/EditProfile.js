@@ -66,9 +66,8 @@ function EditProfile() {
 
       const newImageUrl = response.data.imageUrl;
 
-      const userRes = await api.get("/users");
-      updateUser(userRes.data[0]);
       setNewAvatar(newImageUrl);
+      updateUser({ ...user, profileImage: newImageUrl });
       toast({
         title: "Updated profile successful 🎉",
         description: "Profile image updated successful",
@@ -76,6 +75,7 @@ function EditProfile() {
         duration: 5000,
         isClosable: true
       });
+      window.location.reload();
     } catch (error) {
       const errorMessage = error.response?.data?.message || "Something went wrong"
       toast({

@@ -13,6 +13,8 @@ import { AuthContext } from "./AuthContext";
 import EditProfile from "./pages/EditProfile";
 import CreateJob from "./pages/CreateJob";
 import Settings from "./pages/Settings";
+import Search from "./pages/Search";
+import FollowList from "./pages/FollowList";
 
 function App() {
   const { isLoading, isAuthenticated } = useContext(AuthContext);
@@ -35,6 +37,9 @@ function App() {
           <Route path="/verify-code" element={<VerifyCode />} />
           <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
           <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
+          <Route path="/profile/:id" element={<ProtectedRoute element={<Profile />} />} />
+          <Route path="/profile/:id/:type" element={<ProtectedRoute element={<FollowList />} />} />
+          <Route path="/search" element={<ProtectedRoute element={<Search />} />} />
           <Route path="/edit-profile" element={<ProtectedRoute element={<EditProfile />} />} />
           <Route path="/create-post" element={<ProtectedRoute element={<CreatePost />} />} />
           <Route path="/create-job" element={<ProtectedRoute element={<CreateJob />} />} />

@@ -14,8 +14,8 @@ export function AuthProvider({ children }) {
       const token = Cookies.get('token');
       if (token) {
         try {
-          const response = await api.get('/users');
-          setUser(response.data[0]);
+          const response = await api.post(`/users/me`);
+          setUser(response.data);
           setIsAuthenticated(true);
         } catch (error) {
           console.error('Invalid token:', error);
@@ -33,8 +33,8 @@ export function AuthProvider({ children }) {
     Cookies.set('token', token, { expires: 7 });
     setIsAuthenticated(true);
 
-    api.get('/users').then(response => {
-      setUser(response.data[0]);
+    api.post('/users/me').then(response => {
+      setUser(response.data);
     }).catch(error => {
       console.error('Failed to fetch user after login:', error);
     });

@@ -9,12 +9,15 @@ import {
   Text,
   Spinner,
   Center,
+  Flex,
+  Avatar,
 } from '@chakra-ui/react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import { Link as RouterLink } from 'react-router-dom';
 
 function FollowList() {
-  const { type } = useParams(); // 'followers' or 'following'
+  const { type, id } = useParams(); // 'followers' or 'following'
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
@@ -26,7 +29,7 @@ function FollowList() {
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        const endpoint = type === 'followers' ? api.post("/users/followers") : api.post("/users/following");
+        const endpoint = type === 'followers' ? api.post(`/users/${id}/followers`) : api.post(`/users/${id}/following`);
         const response = await endpoint;
         setUsers(response.data);
       } catch (error) {
@@ -43,7 +46,7 @@ function FollowList() {
       }
     };
     fetchUsers();
-  }, [type, toast, navigate]);
+  }, [type, id, toast, navigate]);
 
   if (isLoading) {
     return (
@@ -55,9 +58,13 @@ function FollowList() {
 
   return (
     <Container maxW="container.md" py={8}>
-      <Heading mb={6}>{type === 'followers' ? 'Followers' : 'Following'}</Heading>
-      {users.length === 0 ? (
-        <Text>No {type === 'followers' ? 'followers' : 'following'} yet.</Text>
+      <Heading mb={6}>{type === 'followers' ? "Followers" : "Following"}</Heading>
+      {isLoading ? (
+        <Flex justify="center" py={8}>
+          <Spinner size="xl" />
+        </Flex>
+      ) : users.length === 0 ? (
+        <Text>No users found.</Text>
       ) : (
         <VStack spacing={4} align="stretch">
           {users.map((user) => (
@@ -66,12 +73,27 @@ function FollowList() {
               p={4}
               borderWidth={1}
               borderRadius="md"
+              boxShadow="sm"
               bg={bg}
               borderColor={borderColor}
-              onClick={() => navigate(`/profile/${user.id}`)}
+              as={RouterLink}
+              to={`/profile/${user.id}`}
             >
-              <Text fontWeight="bold">{user.firstName} {user.lastName}</Text>
-              <Text fontSize="sm" color="gray.500">{user.bio || 'No bio'}</Text>
+              <Flex align="center">
+                <Avatar
+                  size="md"
+                  src={user.profileImage}
+                  mr={4}
+                />
+                <Box>
+                  <Text fontWeight="bold">
+                    {user.firstName} {user.lastName}
+                  </Text>
+                  <Text fontSize="sm" color="gray.500">
+                    {user.bio || 'No bio available'}
+                  </Text>
+                </Box>
+              </Flex>
             </Box>
           ))}
         </VStack>
