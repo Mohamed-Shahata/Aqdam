@@ -44,7 +44,6 @@ function Navbar() {
           <Link as={RouterLink} to="/home" fontSize="xl" fontWeight="bold" color="teal">
             Aqdem
           </Link>
-
           {isAuthenticated && (
             <Flex
               align="center"

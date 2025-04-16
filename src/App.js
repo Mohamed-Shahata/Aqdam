@@ -15,6 +15,7 @@ import CreateJob from "./pages/CreateJob";
 import Settings from "./pages/Settings";
 import Search from "./pages/Search";
 import FollowList from "./pages/FollowList";
+import JobDetails from "./pages/JobDetails";
 
 function App() {
   const { isLoading, isAuthenticated } = useContext(AuthContext);
@@ -43,6 +44,8 @@ function App() {
           <Route path="/edit-profile" element={<ProtectedRoute element={<EditProfile />} />} />
           <Route path="/create-post" element={<ProtectedRoute element={<CreatePost />} />} />
           <Route path="/create-job" element={<ProtectedRoute element={<CreateJob />} />} />
+          <Route path="/jobs/edit/:id" element={<ProtectedRoute element={<CreateJob />} />} />
+          <Route path="/jobs/:id" element={<ProtectedRoute element={<JobDetails />} />} />
           <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
         </Routes>
       </Box>
