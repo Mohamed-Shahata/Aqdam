@@ -33,16 +33,19 @@ import {
   MenuButton,
   Menu,
   ModalHeader,
+  Icon,
 } from '@chakra-ui/react';
 import React, { useContext, useEffect, useState } from 'react';
 import PostActions from '../components/PostActions';
 import { AuthContext } from '../AuthContext';
 import { useNavigate, Link as RouterLink, useParams, Link } from 'react-router-dom';
 import api from '../api';
-import { AddIcon, EditIcon, HamburgerIcon, SettingsIcon } from '@chakra-ui/icons';
+import { AddIcon, EditIcon, HamburgerIcon, SettingsIcon, StarIcon } from '@chakra-ui/icons';
 import { FaBriefcase } from 'react-icons/fa';
 import dayjs from 'dayjs';
 import { format } from 'date-fns';
+import { IoSparkles } from 'react-icons/io5';
+import { FaGem, FaCrown } from 'react-icons/fa';
 
 const Profile = () => {
   const { user } = useContext(AuthContext);
@@ -54,6 +57,7 @@ const Profile = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [jobIdToDelete, setJobIdToDelete] = useState(null);
   const [jobs, setJobs] = useState([]);
+  const [favorites, setFavorites] = useState([]);
   const [posts, setPosts] = useState([
     { id: 1, user: 'ahmed', content: 'beta post', date: '2025-04-14', likes: 0, hasLiked: false, comments: [] },
   ]);
@@ -66,7 +70,7 @@ const Profile = () => {
   const textColor = useColorModeValue('gray.600', 'gray.300');
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileAndFavorites = async () => {
       setIsLoading(true);
       try {
         let userData;
@@ -91,6 +95,12 @@ const Profile = () => {
         // Fetch user's jobs
         const jobsResponse = await api.get(`/jobs/user/${Number(userData.id)}`);
         setJobs(jobsResponse.data);
+
+        // Fetch user's favorites
+        if (user) {
+          const favoritesResponse = await api.post('/jobs/favorites/me');
+          setFavorites(favoritesResponse.data.map(fav => fav.id));
+        }
       } catch (error) {
         const errorMessage = error.response?.data?.message || 'Something went wrong';
         toast({
@@ -106,7 +116,7 @@ const Profile = () => {
       }
     };
     if (user) {
-      fetchProfile();
+      fetchProfileAndFavorites();
     }
   }, [id, user, toast, navigate]);
 
@@ -204,7 +214,41 @@ const Profile = () => {
     }
   };
 
-
+  const handleFavorite = async (jobId) => {
+    try {
+      if (favorites.includes(jobId)) {
+        // Remove from favorites
+        await api.delete(`/jobs/favorites/${Number(jobId)}`);
+        setFavorites(favorites.filter(id => Number(id) !== Number(jobId)));
+        toast({
+          title: 'Success',
+          description: 'Removed from favorites.',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+      } else {
+        // Add to favorites
+        await api.post('/jobs/favorites', { jobId: Number(jobId) });
+        setFavorites([...favorites, Number(jobId)]);
+        toast({
+          title: 'Success',
+          description: 'Added to favorites.',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to update favorites.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
 
   const openDeleteModal = (jobId) => {
     setJobIdToDelete(jobId);
@@ -222,6 +266,7 @@ const Profile = () => {
     }
     closeDeleteModal();
   };
+
   if (isLoading || !profileUser) {
     return (
       <Center h="100vh">
@@ -234,7 +279,6 @@ const Profile = () => {
 
   return (
     <Container maxW="container.md" py={8}>
-
       {isOwnerProfile && (
         <Flex justify="flex-end" mb={4}>
           <IconButton
@@ -243,6 +287,16 @@ const Profile = () => {
             icon={<SettingsIcon boxSize={6} />}
             aria-label="Settings"
             variant="ghost"
+            _hover={{ bg: "teal.900" }}
+          />
+          <IconButton
+            as={RouterLink}
+            to="/favorites"
+            color="yellow.400"
+            icon={<StarIcon boxSize={6} />}
+            aria-label="favorites"
+            variant="ghost"
+            _hover={{ bg: "teal.900", borderColor: 'yellow.500' }}
           />
         </Flex>
       )}
@@ -255,7 +309,39 @@ const Profile = () => {
           onClick={profileUser?.profileImage ? onImageOpen : undefined}
         />
         <Box ml={{ base: 0, md: 4 }} textAlign={{ base: 'center', md: 'left' }}>
-          <Text fontSize="2xl" fontWeight="bold">{profileUser.firstName} {profileUser.lastName}</Text>
+          <Text fontSize="2xl" fontWeight="bold">
+            {profileUser.firstName} {profileUser.lastName}
+            {profileUser?.point >= 100 && (
+              <Icon
+                as={
+                  profileUser.point >= 10000
+                    ? FaCrown
+                    : profileUser.point >= 1000
+                      ? FaGem
+                      : IoSparkles
+                }
+                ml={2}
+                mb={-1}
+                color={
+                  profileUser.point >= 10000
+                    ? 'yellow.500'
+                    : profileUser.point >= 1000
+                      ? 'purple.400'
+                      : "blue.500"
+                }
+
+                boxSize={profileUser.point >= 10000 ? 7 : profileUser.point >= 1000 ? 6 : 6}
+                transition="color 0.2s"
+                aria-label={
+                  profileUser.point >= 10000
+                    ? 'Elite Badge'
+                    : profileUser.point >= 1000
+                      ? 'Pro Badge'
+                      : 'Verified Badge'
+                }
+              />
+            )}
+          </Text>
           <Flex mt={2} gap={6} justify={{ base: 'center', md: 'flex-start' }}>
             <Text fontSize="md" onClick={handleNavegateFollowers} cursor="pointer">
               <Text as="span" fontWeight="bold">{followersCount}</Text> Followers
@@ -278,6 +364,7 @@ const Profile = () => {
               {isFollowing ? 'Unfollow' : 'Follow'}
             </Button>
           )}
+
         </Box>
       </Flex>
       <VStack align="center" spacing={2} mb={6}>
@@ -387,7 +474,9 @@ const Profile = () => {
                               </MenuItem>
                             </>
                           ) : (
-                            <MenuItem>Add to Favorites</MenuItem>
+                            <MenuItem onClick={() => handleFavorite(job.id)}>
+                              {favorites.includes(job.id) ? 'Remove from Favorites' : 'Add to Favorites'}
+                            </MenuItem>
                           )}
                         </MenuList>
                       </Menu>
@@ -400,7 +489,6 @@ const Profile = () => {
                         src={job.user?.profileImage}
                         mr={3}
                       />
-
                       <Box>
                         <Link
                           as={RouterLink}
@@ -411,13 +499,11 @@ const Profile = () => {
                         >
                           {job.user?.firstName} {job.user?.lastName}
                         </Link>
-
                         <Text fontSize="sm" color="gray.500">
                           {format(new Date(job.createdAt), 'hh:mm a')} - {dayjs(job.createdAt).format('YYYY-MM-DD')}
                         </Text>
                       </Box>
                     </Flex>
-
 
                     {/* Job Details */}
                     <Heading
@@ -550,7 +636,7 @@ const Profile = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </Container >
+    </Container>
   );
 };
 

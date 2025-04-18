@@ -4,7 +4,7 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { AuthContext } from '../AuthContext'
 import { FaHome, FaList, FaSignInAlt, FaUser, FaUserPlus } from 'react-icons/fa'
 import ColorModeToggle from './ColorModeToggle'
-import { SearchIcon, SettingsIcon } from '@chakra-ui/icons'
+import { BellIcon, SearchIcon, SettingsIcon } from '@chakra-ui/icons'
 
 function Navbar() {
   const { isAuthenticated } = useContext(AuthContext);
@@ -118,6 +118,9 @@ function Navbar() {
                     mx={1}
                   >
                     Settings
+                  </Button>
+                  <Button as={RouterLink} to="/notifications" variant="ghost">
+                    <BellIcon boxSize={6} />
                   </Button>
                   <ColorModeToggle />
                 </>

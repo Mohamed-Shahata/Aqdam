@@ -8,11 +8,14 @@ import {
   Avatar,
   useColorModeValue,
   useToast,
+  Icon,
 } from '@chakra-ui/react';
 import React, { useContext, useEffect, useState } from 'react';
 import { useLocation, Link as RouterLink } from 'react-router-dom';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
+import { IoSparkles } from 'react-icons/io5';
+import { FaGem, FaCrown } from 'react-icons/fa';
 
 const Search = () => {
   const { user: currentUser } = useContext(AuthContext);
@@ -86,6 +89,36 @@ const Search = () => {
                     <Box>
                       <Text fontWeight="bold">
                         {user.firstName} {user.lastName}
+                        {user.point >= 100 && (
+                          <Icon
+                            as={
+                              user.point >= 10000
+                                ? FaCrown
+                                : user.point >= 1000
+                                  ? FaGem
+                                  : IoSparkles
+                            }
+                            ml={2}
+                            mb={-1}
+                            color={
+                              user.point >= 10000
+                                ? 'yellow.500'
+                                : user.point >= 1000
+                                  ? 'purple.400'
+                                  : "blue.500"
+                            }
+
+                            boxSize={user.point >= 10000 ? 4 : user.point >= 1000 ? 4 : 4}
+                            transition="color 0.2s"
+                            aria-label={
+                              user.point >= 10000
+                                ? 'Elite Badge'
+                                : user.point >= 1000
+                                  ? 'Pro Badge'
+                                  : 'Verified Badge'
+                            }
+                          />
+                        )}
                       </Text>
                       <Text fontSize="sm" color="gray.500">
                         {user.bio || 'No bio available'}
