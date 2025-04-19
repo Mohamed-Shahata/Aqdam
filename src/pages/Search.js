@@ -9,21 +9,29 @@ import {
   useColorModeValue,
   useToast,
   Icon,
+  InputGroup,
+  Input,
+  InputRightElement,
+  IconButton,
 } from '@chakra-ui/react';
 import React, { useContext, useEffect, useState } from 'react';
-import { useLocation, Link as RouterLink } from 'react-router-dom';
+import { useLocation, Link as RouterLink, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
 import { IoSparkles } from 'react-icons/io5';
 import { FaGem, FaCrown } from 'react-icons/fa';
+import { SearchIcon } from '@chakra-ui/icons';
 
 const Search = () => {
   const { user: currentUser } = useContext(AuthContext);
   const [users, setUsers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
+  const navigate = useNavigate();
   const bg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const searchBg = useColorModeValue('gray.100', 'gray.700');
   const location = useLocation();
 
   useEffect(() => {
@@ -54,8 +62,60 @@ const Search = () => {
     fetchUsers();
   }, [location.search, toast]);
 
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      navigate(`/search?query=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery('');
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+
   return (
     <Container maxW="container.md" py={8}>
+      <Flex
+        justify="center"
+        align="center"
+        w="100%"
+        py={2}
+      >
+        <Flex
+          flex={1}
+          maxW="600px"
+          w="100%"
+          align="center"
+          mt={-3}
+          mb={5}
+        >
+          <InputGroup w="100%">
+            <Input
+              placeholder="Search for people..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={handleKeyPress}
+              borderRadius="md"
+              size="md"
+              bg={searchBg}
+              _focus={{ borderColor: 'teal.500' }}
+            />
+            <InputRightElement>
+              <IconButton
+                aria-label="Search"
+                icon={<SearchIcon />}
+                onClick={handleSearch}
+                variant="ghost"
+                size="sm"
+                colorScheme="teal"
+              />
+            </InputRightElement>
+          </InputGroup>
+        </Flex>
+      </Flex>
       {isLoading ? (
         <Flex justify="center" py={8}>
           <Spinner size="xl" />

@@ -18,6 +18,7 @@ import FollowList from "./pages/FollowList";
 import JobDetails from "./pages/JobDetails";
 import Favorites from "./pages/Favorites";
 import Notifications from "./pages/Notifications";
+import PostDetails from "./pages/PostDetails";
 
 function App() {
   const { isLoading, isAuthenticated } = useContext(AuthContext);
@@ -46,9 +47,11 @@ function App() {
           <Route path="/edit-profile" element={<ProtectedRoute element={<EditProfile />} />} />
           <Route path="/create-post" element={<ProtectedRoute element={<CreatePost />} />} />
           <Route path="/create-job" element={<ProtectedRoute element={<CreateJob />} />} />
-          <Route path="/jobs/edit/:id" element={<ProtectedRoute element={<CreateJob />} />} />
+          <Route path="/edit-job/:id" element={<ProtectedRoute element={<CreateJob />} />} />
+          <Route path="/edit-post/:id" element={<ProtectedRoute element={<CreatePost />} />} />
           <Route path="/notifications" element={<ProtectedRoute element={<Notifications />} />} />
           <Route path="/jobs/:id" element={<ProtectedRoute element={<JobDetails />} />} />
+          <Route path="/posts/:id" element={<ProtectedRoute element={<PostDetails />} />} />
           <Route path="/favorites" element={<ProtectedRoute element={<Favorites />} />} />
           <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
         </Routes>

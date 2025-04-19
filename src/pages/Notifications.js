@@ -8,6 +8,8 @@ import {
   Flex,
   useColorModeValue,
   useToast,
+  Badge,
+  Avatar,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import React, { useContext, useEffect, useState } from 'react';
@@ -34,7 +36,6 @@ const Notifications = () => {
           const fetchedNotifications = Array.isArray(notificationsResponse.data)
             ? notificationsResponse.data
             : [];
-          console.log('Fetched Notifications:', fetchedNotifications);
           setNotifications(fetchedNotifications);
         }
       } catch (error) {
@@ -56,7 +57,7 @@ const Notifications = () => {
     }
   }, [toast, user]);
 
-  const markNotificationAsRead = async (notificationId, jobId) => {
+  const markNotificationAsRead = async (notificationId, jobId, postId) => {
     try {
       await api.patch(`/notifications/${notificationId}/read`);
       setNotifications((prev) =>
@@ -64,7 +65,11 @@ const Notifications = () => {
           n.id === notificationId ? { ...n, isRead: true } : n
         )
       );
-      navigate(`/jobs/${jobId}`);
+      if (jobId) {
+        navigate(`/jobs/${jobId}`);
+      } else if (postId) {
+        navigate(`/posts/${postId}`);
+      }
     } catch (error) {
       console.error('Error marking notification as read:', error);
       toast({
@@ -95,7 +100,8 @@ const Notifications = () => {
     );
   }
 
-  const validNotifications = Array.isArray(notifications) ? notifications : [];
+  const validNotifications = notifications
+  console.log(notifications)
 
   return (
     <Container maxW="container.md" py={8}>
@@ -106,26 +112,40 @@ const Notifications = () => {
         <Text>No notifications yet.</Text>
       ) : (
         <VStack spacing={4} align="stretch">
-          {validNotifications.map((notification) => (
+          {validNotifications.map(notification => (
+
             <Box
               key={notification.id}
               p={4}
               borderWidth={1}
               borderRadius="md"
               boxShadow="sm"
-              bg={notification.isRead ? bg : 'yellow.50'}
+              bg={notification.isRead ? bg : 'whiteAlpha.100'}
               borderColor={borderColor}
-              cursor="pointer"
-              onClick={() => markNotificationAsRead(notification.id, notification.jobId)}
+              cursor={(notification?.job?.id || notification?.post?.id) ? 'pointer' : 'default'}
+              onClick={() =>
+                (notification?.job?.id || notification?.post?.id) &&
+                markNotificationAsRead(notification.id, notification?.job?.id, notification?.post?.id)
+              }
             >
-              <VStack align="start" spacing={1}>
-                <Text fontWeight={notification.isRead ? 'normal' : 'bold'} color={textColor}>
-                  {notification.message}
-                </Text>
-                <Text fontSize="sm" color="gray.500">
-                  {dayjs(notification.createdAt).format('YYYY-MM-DD HH:mm')}
-                </Text>
-              </VStack>
+
+              <Flex align="center" justify="start">
+                <Avatar size="md" src={
+                  notification?.post?.user?.profileImage || notification?.job?.user?.profileImage
+                } mr={4} />
+                <VStack align="start" spacing={1}>
+                  <Flex align="center" gap={2}>
+                    {notification?.job?.id && <Badge colorScheme="blue">Job</Badge>}
+                    {notification?.post?.id && <Badge colorScheme="green">Post</Badge>}
+                    <Text fontWeight={notification.isRead ? 'normal' : 'bold'} color={textColor}>
+                      {notification.message}
+                    </Text>
+                  </Flex>
+                  <Text fontSize="sm" color="gray.500">
+                    {dayjs(notification.createdAt).format('YYYY-MM-DD HH:mm')}
+                  </Text>
+                </VStack>
+              </Flex>
             </Box>
           ))}
         </VStack>

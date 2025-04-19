@@ -19,41 +19,53 @@ import {
   MenuItem,
 } from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api';
-import { HamburgerIcon, StarIcon } from '@chakra-ui/icons';
+import { AuthContext } from '../AuthContext';
+import { HamburgerIcon } from '@chakra-ui/icons';
 import dayjs from 'dayjs';
 import { format } from 'date-fns';
 
 const PostDetails = () => {
   const { id } = useParams();
+  const { user } = useContext(AuthContext);
   const [post, setPost] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [userReactions, setUserReactions] = useState({});
+  const [reactionCounts, setReactionCounts] = useState({ benefited: 0, not_benefited: 0 });
   const toast = useToast();
   const bg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const textColor = useColorModeValue('gray.600', 'gray.300');
-  const [userReactions, setUserReactions] = useState({});
 
   useEffect(() => {
-    const fetchPostAndFavorites = async () => {
+    const fetchPost = async () => {
       setIsLoading(true);
       try {
-        // Fetch post details
         const postResponse = await api.get(`/posts/${id}`);
         setPost(postResponse.data);
 
-        // Fetch favorites to check if post is favorited
-        const favoritesResponse = await api.get('/favorites/me');
-        const favorites = Array.isArray(favoritesResponse.data) ? favoritesResponse.data : [];
-        const isPostFavorite = favorites.some((fav) => Number(fav.postId) === Number(id));
-        setIsFavorite(isPostFavorite);
+        const reactionResponse = await api.get(`/posts/${id}/reactions`);
+        setReactionCounts({
+          benefited: reactionResponse.data.benefited || 0,
+          not_benefited: reactionResponse.data.not_benefited || 0,
+        });
+
+        if (user) {
+          const reactionsResponse = await api.get('/posts/reactions/me');
+          const userReactionsData = Array.isArray(reactionsResponse.data)
+            ? reactionsResponse.data.reduce((acc, reaction) => {
+              acc[reaction.postId] = reaction.type;
+              return acc;
+            }, {})
+            : {};
+          setUserReactions(userReactionsData);
+        }
       } catch (error) {
         toast({
           title: 'Error',
-          description: error.response?.data?.message || 'Failed to fetch post details or favorites.',
+          description: error.response?.data?.message || 'Failed to fetch post details.',
           status: 'error',
           duration: 5000,
           isClosable: true,
@@ -62,20 +74,18 @@ const PostDetails = () => {
         setIsLoading(false);
       }
     };
-    fetchPostAndFavorites();
-  }, [id, toast]);
+    fetchPost();
+  }, [id, toast, user]);
 
   // Helper function to convert string to list items
   const stringToList = (str) => {
     if (!str) return [];
-    // Split by newlines or commas, and trim whitespace
     return str
       .split(/[\n,]+/)
       .map((item) => item.trim())
       .filter((item) => item);
   };
 
-  // Helper function to render resources with clickable links
   const renderResources = (resources) => {
     const items = stringToList(resources);
     const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -106,7 +116,8 @@ const PostDetails = () => {
 
   const handleReaction = async (postId, type) => {
     try {
-      if (userReactions[postId] === type) {
+      const currentReaction = userReactions[postId];
+      if (currentReaction === type) {
         // Remove reaction
         await api.delete(`/posts/${postId}/reaction`);
         setUserReactions((prev) => {
@@ -114,6 +125,10 @@ const PostDetails = () => {
           delete newReactions[postId];
           return newReactions;
         });
+        setReactionCounts((prev) => ({
+          ...prev,
+          [type]: prev[type] - 1,
+        }));
         toast({
           title: 'Success',
           description: 'Reaction removed.',
@@ -125,6 +140,20 @@ const PostDetails = () => {
         // Add or update reaction
         await api.post(`/posts/${postId}/reaction`, { type });
         setUserReactions((prev) => ({ ...prev, [postId]: type }));
+        setReactionCounts((prev) => ({
+          benefited:
+            type === 'benefited'
+              ? prev.benefited + 1
+              : currentReaction === 'benefited'
+                ? prev.benefited - 1
+                : prev.benefited,
+          not_benefited:
+            type === 'not_benefited'
+              ? prev.not_benefited + 1
+              : currentReaction === 'not_benefited'
+                ? prev.not_benefited - 1
+                : prev.not_benefited,
+        }));
         toast({
           title: 'Success',
           description: `Marked as ${type === 'benefited' ? 'Benefited' : 'Not Benefited'}.`,
@@ -138,43 +167,6 @@ const PostDetails = () => {
       toast({
         title: 'Error',
         description: error.response?.data?.message || 'Failed to manage reaction.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const toggleFavorite = async () => {
-    try {
-      if (isFavorite) {
-        // Remove from favorites
-        await api.delete(`/favorites/${id}`);
-        setIsFavorite(false);
-        toast({
-          title: 'Success',
-          description: 'Removed from favorites.',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        // Add to favorites
-        await api.post('/favorites', { postId: id });
-        setIsFavorite(true);
-        toast({
-          title: 'Success',
-          description: 'Added to favorites.',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      }
-    } catch (error) {
-      console.error('Favorite Error:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to manage favorite.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -200,15 +192,11 @@ const PostDetails = () => {
     );
   }
 
-  const objectivesList = stringToList(post.objectives_learn);
-  const isLongList = objectivesList.length > 5;
-
   return (
     <Container maxW="container.md" py={8}>
       <Box
         key={`post-${post.id}`}
         p={8}
-        minHeight="240px"
         borderWidth={1}
         borderRadius="md"
         boxShadow="sm"
@@ -216,7 +204,7 @@ const PostDetails = () => {
         borderColor={borderColor}
         position="relative"
       >
-        {post.user && Number(post.user?.id) === Number(post.user.id) && (
+        {user && Number(post.user?.id) === Number(user.id) && (
           <Menu>
             <MenuButton
               as={IconButton}
@@ -273,7 +261,8 @@ const PostDetails = () => {
               {post.user?.firstName} {post.user?.lastName}
             </Link>
             <Text fontSize="sm" color="gray.500">
-              {format(new Date(post.createdAt), 'hh:mm a')} - {dayjs(post.createdAt).format('YYYY-MM-DD')}
+              {format(new Date(post.createdAt), 'hh:mm a')} -{' '}
+              {dayjs(post.createdAt).format('YYYY-MM-DD')}
             </Text>
           </Box>
         </Flex>
@@ -287,14 +276,6 @@ const PostDetails = () => {
         >
           {post.title}
         </Heading>
-        {post.introduction && (
-          <Box mb={6}>
-            <Text fontWeight="semibold" mb={2}>
-              Introduction
-            </Text>
-            <Text color={textColor}>{post.introduction}</Text>
-          </Box>
-        )}
         {post.content && (
           <Box mb={6}>
             <Text fontWeight="semibold" mb={2}>
@@ -303,50 +284,6 @@ const PostDetails = () => {
             <Text color={textColor} whiteSpace="pre-wrap">
               {post.content}
             </Text>
-          </Box>
-        )}
-        {post.objectives_learn && (
-          <Box mb={6}>
-            <Text fontWeight="semibold" mb={2}>
-              Learning Objectives
-            </Text>
-            <Box
-              maxHeight={isLongList ? '200px' : 'auto'}
-              overflowY={isLongList ? 'auto' : 'visible'}
-              css={{
-                '&::-webkit-scrollbar': { width: '8px' }
-              }}
-            >
-              <UnorderedList color={textColor} spacing={2}>
-                {objectivesList.map((item, index) => (
-                  <ListItem key={index}>{item}</ListItem>
-                ))}
-              </UnorderedList>
-            </Box>
-          </Box>
-        )}
-        {post.use_cases && (
-          <Box mb={6}>
-            <Text fontWeight="semibold" mb={2}>
-              Use Cases
-            </Text>
-            <UnorderedList color={textColor} spacing={2}>
-              {stringToList(post.use_cases).map((item, index) => (
-                <ListItem key={index}>{item}</ListItem>
-              ))}
-            </UnorderedList>
-          </Box>
-        )}
-        {post.additional_tips && (
-          <Box mb={6}>
-            <Text fontWeight="semibold" mb={2}>
-              Additional Tips
-            </Text>
-            <UnorderedList color={textColor} spacing={2}>
-              {stringToList(post.additional_tips).map((item, index) => (
-                <ListItem key={index}>{item}</ListItem>
-              ))}
-            </UnorderedList>
           </Box>
         )}
         {post.resources && (
@@ -359,36 +296,40 @@ const PostDetails = () => {
             </UnorderedList>
           </Box>
         )}
-        {post.user && (
-          <Flex gap={2} align="center">
-            <Button
-              colorScheme="green"
-              size="sm"
-              flex="1"
-              opacity={userReactions[post.id] && userReactions[post.id] !== 'benefited' ? 0.5 : 1}
-              onClick={() => handleReaction(post.id, 'benefited')}
-            >
-              Benefited
-            </Button>
-            <Button
-              colorScheme="red"
-              size="sm"
-              variant="outline"
-              flex="1"
-              opacity={userReactions[post.id] && userReactions[post.id] !== 'not_benefited' ? 0.5 : 1}
-              onClick={() => handleReaction(post.id, 'not_benefited')}
-            >
-              Not Benefited
-            </Button>
-            <IconButton
-              icon={<StarIcon />}
-              color={isFavorite ? 'yellow.400' : 'gray.400'}
-              variant={isFavorite ? 'solid' : 'outline'}
-              size="sm"
-              aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-              onClick={toggleFavorite}
-            />
-          </Flex>
+        {user && (
+          <Box>
+            <Flex gap={2} mb={2}>
+              <Button
+                colorScheme="green"
+                size="sm"
+                flex="1"
+                opacity={userReactions[post.id] && userReactions[post.id] !== 'benefited' ? 0.5 : 1}
+                onClick={() => handleReaction(post.id, 'benefited')}
+              >
+                Benefited {reactionCounts.benefited > 0 ? `(${reactionCounts.benefited})` : ''}
+              </Button>
+              <Button
+                colorScheme="red"
+                size="sm"
+                variant="outline"
+                flex="1"
+                opacity={
+                  userReactions[post.id] && userReactions[post.id] !== 'not_benefited' ? 0.5 : 1
+                }
+                onClick={() => handleReaction(post.id, 'not_benefited')}
+              >
+                Not Benefited {reactionCounts.not_benefited > 0 ? `(${reactionCounts.not_benefited})` : ''}
+              </Button>
+            </Flex>
+            <Flex gap={4}>
+              <Text fontSize="sm" color="teal.500">
+                Benefited: {reactionCounts.benefited}
+              </Text>
+              <Text fontSize="sm" color="red.500">
+                Not Benefited: {reactionCounts.not_benefited}
+              </Text>
+            </Flex>
+          </Box>
         )}
       </Box>
     </Container>

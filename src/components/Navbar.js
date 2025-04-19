@@ -1,32 +1,79 @@
-import React, { useContext, useState } from 'react'
-import { Box, Button, Drawer, DrawerBody, DrawerContent, DrawerHeader, DrawerOverlay, Flex, Icon, IconButton, Input, InputGroup, InputRightElement, Link, useColorModeValue, useDisclosure, VStack } from '@chakra-ui/react'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
-import { AuthContext } from '../AuthContext'
-import { FaHome, FaList, FaSignInAlt, FaUser, FaUserPlus } from 'react-icons/fa'
-import ColorModeToggle from './ColorModeToggle'
-import { BellIcon, SearchIcon, SettingsIcon } from '@chakra-ui/icons'
+import React, { useContext, useState, useEffect } from 'react';
+import {
+  Box,
+  Button,
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerHeader,
+  DrawerOverlay,
+  Flex,
+  Icon,
+  IconButton,
+  Input,
+  InputGroup,
+  InputRightElement,
+  Link,
+  useColorModeValue,
+  useDisclosure,
+  VStack,
+} from '@chakra-ui/react';
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+import { AuthContext } from '../AuthContext';
+import { FaHome, FaList, FaSignInAlt, FaUser, FaUserPlus } from 'react-icons/fa';
+import ColorModeToggle from './ColorModeToggle';
+import { BellIcon, SearchIcon, SettingsIcon } from '@chakra-ui/icons';
+import api from '../api';
 
 function Navbar() {
   const { isAuthenticated } = useContext(AuthContext);
   const bg = useColorModeValue('white', 'gray.800');
   const { isOpen: isDrawerOpen, onOpen: onDrawerOpen, onClose: onDrawerClose } = useDisclosure();
   const [searchQuery, setSearchQuery] = useState('');
-  const borderColor = useColorModeValue('gray.200', 'gray.600')
-  const searchBg = useColorModeValue("gray.100", "gray.700");
+  const [notifications, setNotifications] = useState([]);
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const searchBg = useColorModeValue('gray.100', 'gray.700');
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Bell color based on unread notifications
+  const bellColor = useColorModeValue(
+    notifications.filter((n) => !n.isRead).length > 0 ? 'yellow.500' : 'gray.500',
+    notifications.filter((n) => !n.isRead).length > 0 ? 'yellow.300' : 'gray.300'
+  );
+
+  // Fetch notifications
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (isAuthenticated) {
+        try {
+          const response = await api.get('/notifications');
+          const fetchedNotifications = Array.isArray(response.data) ? response.data : [];
+          setNotifications(fetchedNotifications);
+        } catch (error) {
+          console.error('Notifications Fetch Error:', error);
+          setNotifications([]);
+        }
+      } else {
+        setNotifications([]);
+      }
+    };
+
+    fetchNotifications();
+  }, [isAuthenticated, location.pathname]); // Refetch when location changes
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
       navigate(`/search?query=${encodeURIComponent(searchQuery)}`);
       setSearchQuery('');
     }
-  }
+  };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleSearch();
     }
-  }
+  };
 
   return (
     <>
@@ -40,44 +87,50 @@ function Navbar() {
         borderColor={borderColor}
         borderBottomWidth={1}
       >
-        <Flex align="center" justify="space-between" maxW="container.xl" mx="auto" px={{ base: 4, md: 0 }}>
-          <Link as={RouterLink} to="/home" fontSize="xl" fontWeight="bold" color="teal">
+        <Flex
+          align="center"
+          justify="space-between"
+          maxW="container.md"
+          mx="auto"
+          px={{ base: 4, md: 0 }}
+        >
+          <Link as={RouterLink} to="/home" fontSize="xl" fontWeight="bold" color="teal.500">
             Aqdem
           </Link>
-          {isAuthenticated && (
-            <Flex
-              align="center"
-              flex={1}
-              maxW={{ base: '100%', md: '400px' }}
-              mx={{ base: 0, md: 4 }}
-              display={{ base: 'none', md: 'flex' }}
-            >
-              <InputGroup>
-                <Input
-                  placeholder="Search for people..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  borderRadius="md"
-                  size="md"
-                  bg={searchBg}
-                  _focus={{ borderColor: 'teal.500' }}
-                />
-                <InputRightElement>
-                  <IconButton
-                    aria-label="Search"
-                    icon={<SearchIcon />}
-                    onClick={handleSearch}
-                    variant="ghost"
-                    size="sm"
-                    colorScheme="teal"
-                  />
-                </InputRightElement>
-              </InputGroup>
-            </Flex>
-          )}
 
           <Flex alignItems="center">
+
+            {isAuthenticated && (
+              <Button
+                as={RouterLink}
+                to="/notifications"
+                variant="ghost"
+                position="relative"
+                display={{ base: 'flex', md: 'none' }}
+                mr={2}
+              >
+                <BellIcon boxSize={6} color={bellColor} />
+                {notifications.filter((n) => !n.isRead).length > 0 && (
+                  <Box
+                    position="absolute"
+                    top={0}
+                    right={0}
+                    bg="red.500"
+                    color="white"
+                    borderRadius="full"
+                    w={5}
+                    h={5}
+                    fontSize="sm"
+                    fontWeight="bold"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                  >
+                    {notifications.filter((n) => !n.isRead).length}
+                  </Box>
+                )}
+              </Button>
+            )}
             <IconButton
               icon={<FaList />}
               aria-label="Open menu"
@@ -119,8 +172,27 @@ function Navbar() {
                   >
                     Settings
                   </Button>
-                  <Button as={RouterLink} to="/notifications" variant="ghost">
-                    <BellIcon boxSize={6} />
+                  <Button as={RouterLink} to="/notifications" variant="ghost" position="relative">
+                    <BellIcon boxSize={6} color={bellColor} />
+                    {notifications.filter((n) => !n.isRead).length > 0 && (
+                      <Box
+                        position="absolute"
+                        top={0}
+                        right={0}
+                        bg="red.500"
+                        color="white"
+                        borderRadius="full"
+                        w={5}
+                        h={5}
+                        fontSize="sm"
+                        fontWeight="bold"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                      >
+                        {notifications.filter((n) => !n.isRead).length}
+                      </Box>
+                    )}
                   </Button>
                   <ColorModeToggle />
                 </>
@@ -161,27 +233,59 @@ function Navbar() {
           <DrawerBody>
             <VStack spacing={4} align="stretch">
               {isAuthenticated && (
-                <InputGroup>
-                  <Input
-                    placeholder="Search for people..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    borderRadius="md"
-                    bg={searchBg}
-                    _focus={{ borderColor: 'teal.500' }}
-                  />
-                  <InputRightElement>
-                    <IconButton
-                      aria-label="Search"
-                      icon={<SearchIcon />}
-                      onClick={handleSearch}
-                      variant="ghost"
-                      size="sm"
-                      colorScheme="teal"
+                <>
+                  <InputGroup>
+                    <Input
+                      placeholder="Search for people..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      borderRadius="md"
+                      bg={searchBg}
+                      _focus={{ borderColor: 'teal.500' }}
                     />
-                  </InputRightElement>
-                </InputGroup>
+                    <InputRightElement>
+                      <IconButton
+                        aria-label="Search"
+                        icon={<SearchIcon />}
+                        onClick={handleSearch}
+                        variant="ghost"
+                        size="sm"
+                        colorScheme="teal"
+                      />
+                    </InputRightElement>
+                  </InputGroup>
+                  <Button
+                    as={RouterLink}
+                    to="/notifications"
+                    colorScheme="teal"
+                    variant="ghost"
+                    leftIcon={<BellIcon color={bellColor} />}
+                    onClick={onDrawerClose}
+                    position="relative"
+                  >
+                    Notifications
+                    {notifications.filter((n) => !n.isRead).length > 0 && (
+                      <Box
+                        position="absolute"
+                        top={2}
+                        right={2}
+                        bg="red.500"
+                        color="white"
+                        borderRadius="full"
+                        w={5}
+                        h={5}
+                        fontSize="sm"
+                        fontWeight="bold"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                      >
+                        {notifications.filter((n) => !n.isRead).length}
+                      </Box>
+                    )}
+                  </Button>
+                </>
               )}
               {isAuthenticated ? (
                 <>
@@ -190,8 +294,8 @@ function Navbar() {
                     to="/home"
                     colorScheme="teal"
                     variant="ghost"
-                    onClick={onDrawerClose}
                     leftIcon={<Icon as={FaHome} />}
+                    onClick={onDrawerClose}
                   >
                     Home
                   </Button>
@@ -247,7 +351,7 @@ function Navbar() {
         </DrawerContent>
       </Drawer>
     </>
-  )
+  );
 }
 
-export default Navbar
+export default Navbar;

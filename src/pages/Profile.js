@@ -36,16 +36,16 @@ import {
   Icon,
 } from '@chakra-ui/react';
 import React, { useContext, useEffect, useState } from 'react';
-import PostActions from '../components/PostActions';
 import { AuthContext } from '../AuthContext';
 import { useNavigate, Link as RouterLink, useParams, Link } from 'react-router-dom';
 import api from '../api';
 import { AddIcon, EditIcon, HamburgerIcon, SettingsIcon, StarIcon } from '@chakra-ui/icons';
-import { FaBriefcase } from 'react-icons/fa';
+import { FaBookOpen, FaBriefcase, FaHeart, FaRegHeart } from 'react-icons/fa';
 import dayjs from 'dayjs';
 import { format } from 'date-fns';
 import { IoSparkles } from 'react-icons/io5';
 import { FaGem, FaCrown } from 'react-icons/fa';
+import { MdWork } from "react-icons/md"
 
 const Profile = () => {
   const { user } = useContext(AuthContext);
@@ -55,12 +55,14 @@ const Profile = () => {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [jobIdToDelete, setJobIdToDelete] = useState(null);
+  const [itemIdToDelete, setItemIdToDelete] = useState(null);
+  const [deleteType, setDeleteType] = useState(null); // 'job' or 'post'
   const [jobs, setJobs] = useState([]);
-  const [favorites, setFavorites] = useState([]);
-  const [posts, setPosts] = useState([
-    { id: 1, user: 'ahmed', content: 'beta post', date: '2025-04-14', likes: 0, hasLiked: false, comments: [] },
-  ]);
+  const [posts, setPosts] = useState([]);
+  const [favorites, setFavorites] = useState([]); // Only for jobs
+  const [userReactions, setUserReactions] = useState({});
+  const [expandedPosts, setExpandedPosts] = useState([]);
+  const [reactionCounts, setReactionCounts] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
@@ -96,11 +98,43 @@ const Profile = () => {
         const jobsResponse = await api.get(`/jobs/user/${Number(userData.id)}`);
         setJobs(jobsResponse.data);
 
-        // Fetch user's favorites
+        // Fetch user's posts
+        const postsResponse = await api.get(`/posts/user/${Number(userData.id)}`);
+        setPosts(postsResponse.data);
+
+        // Fetch user's job favorites
         if (user) {
-          const favoritesResponse = await api.post('/jobs/favorites/me');
-          setFavorites(favoritesResponse.data.map(fav => fav.id));
+          const jobFavoritesResponse = await api.post('/jobs/favorites/me');
+          setFavorites(jobFavoritesResponse.data.map(fav => fav.id));
         }
+
+        // Fetch user reactions
+        const reactionsResponse = await api.get('/posts/reactions/me');
+        const userReactionsData = Array.isArray(reactionsResponse.data)
+          ? reactionsResponse.data.reduce((acc, reaction) => {
+            acc[reaction.postId] = reaction.type;
+            return acc;
+          }, {})
+          : {};
+        setUserReactions(userReactionsData);
+
+        // Fetch reaction counts for all posts
+        const reactionCountsData = {};
+        await Promise.all(
+          postsResponse.data.map(async (post) => {
+            try {
+              const reactionResponse = await api.get(`/posts/${post.id}/reactions`);
+              reactionCountsData[post.id] = {
+                benefited: reactionResponse.data.benefited || 0,
+                not_benefited: reactionResponse.data.not_benefited || 0,
+              };
+            } catch (error) {
+              console.error(`Failed to fetch reactions for post ${post.id}:`, error);
+              reactionCountsData[post.id] = { benefited: 0, not_benefited: 0 };
+            }
+          })
+        );
+        setReactionCounts(reactionCountsData);
       } catch (error) {
         const errorMessage = error.response?.data?.message || 'Something went wrong';
         toast({
@@ -144,25 +178,6 @@ const Profile = () => {
     }
   };
 
-  const handleLike = (postId) => {
-    setPosts(posts.map((post) => {
-      if (post.id === postId) {
-        if (post.hasLiked) {
-          return { ...post, likes: post.likes - 1, hasLiked: false };
-        } else {
-          return { ...post, likes: post.likes + 1, hasLiked: true };
-        }
-      }
-      return post;
-    }));
-  };
-
-  const handleComment = (postId, comment) => {
-    setPosts(posts.map((post) =>
-      post.id === postId ? { ...post, comments: [...post.comments, comment] } : post
-    ));
-  };
-
   const handleNavegateFollowing = () => {
     if (!id) {
       return navigate(`/profile/${user.id}/following`);
@@ -192,13 +207,18 @@ const Profile = () => {
     return text.slice(0, maxLength) + '...';
   };
 
-  const handleDeleteJob = async (jobId) => {
+  const handleDelete = async (id, type) => {
     try {
-      await api.delete(`/jobs/${jobId}`);
-      setJobs(jobs.filter((job) => job.id !== jobId));
+      if (type === 'job') {
+        await api.delete(`/jobs/${id}`);
+        setJobs(jobs.filter((job) => job.id !== id));
+      } else if (type === 'post') {
+        await api.delete(`/posts/${id}`);
+        setPosts(posts.filter((post) => post.id !== id));
+      }
       toast({
         title: 'Success',
-        description: 'Job deleted successfully.',
+        description: `${type === 'job' ? 'Job' : 'Post'} deleted successfully.`,
         status: 'success',
         duration: 5000,
         isClosable: true,
@@ -206,7 +226,7 @@ const Profile = () => {
     } catch (error) {
       toast({
         title: 'Error',
-        description: error.response?.data?.message || 'Failed to delete job.',
+        description: error.response?.data?.message || `Failed to delete ${type === 'job' ? 'job' : 'post'}.`,
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -217,23 +237,21 @@ const Profile = () => {
   const handleFavorite = async (jobId) => {
     try {
       if (favorites.includes(jobId)) {
-        // Remove from favorites
         await api.delete(`/jobs/favorites/${Number(jobId)}`);
-        setFavorites(favorites.filter(id => Number(id) !== Number(jobId)));
+        setFavorites(favorites.filter((id) => Number(id) !== Number(jobId)));
         toast({
           title: 'Success',
-          description: 'Removed from favorites.',
+          description: 'Removed from job favorites.',
           status: 'success',
           duration: 5000,
           isClosable: true,
         });
       } else {
-        // Add to favorites
         await api.post('/jobs/favorites', { jobId: Number(jobId) });
         setFavorites([...favorites, Number(jobId)]);
         toast({
           title: 'Success',
-          description: 'Added to favorites.',
+          description: 'Added to job favorites.',
           status: 'success',
           duration: 5000,
           isClosable: true,
@@ -250,22 +268,129 @@ const Profile = () => {
     }
   };
 
-  const openDeleteModal = (jobId) => {
-    setJobIdToDelete(jobId);
+  const openDeleteModal = (id, type) => {
+    setItemIdToDelete(id);
+    setDeleteType(type);
     setIsDeleteModalOpen(true);
   };
 
   const closeDeleteModal = () => {
     setIsDeleteModalOpen(false);
-    setJobIdToDelete(null);
+    setItemIdToDelete(null);
+    setDeleteType(null);
   };
 
-  const confirmDeleteJob = async () => {
-    if (jobIdToDelete) {
-      await handleDeleteJob(jobIdToDelete);
+  const confirmDelete = async () => {
+    if (itemIdToDelete && deleteType) {
+      await handleDelete(itemIdToDelete, deleteType);
     }
     closeDeleteModal();
   };
+
+  const handleReaction = async (postId, type) => {
+    try {
+      const currentReaction = userReactions[postId];
+      if (currentReaction === type) {
+        // Remove reaction
+        await api.delete(`/posts/${postId}/reaction`);
+        setUserReactions((prev) => {
+          const newReactions = { ...prev };
+          delete newReactions[postId];
+          return newReactions;
+        });
+        setReactionCounts((prev) => ({
+          ...prev,
+          [postId]: {
+            ...prev[postId],
+            [type]: (prev[postId]?.[type] || 1) - 1,
+          },
+        }));
+        toast({
+          title: 'Success',
+          description: 'Reaction removed.',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+      } else {
+        // Add or update reaction
+        await api.post(`/posts/${postId}/reaction`, { type });
+        setUserReactions((prev) => ({ ...prev, [postId]: type }));
+        setReactionCounts((prev) => {
+          const currentCounts = prev[postId] || { benefited: 0, not_benefited: 0 };
+          return {
+            ...prev,
+            [postId]: {
+              benefited:
+                type === 'benefited'
+                  ? currentCounts.benefited + 1
+                  : currentReaction === 'benefited'
+                    ? currentCounts.benefited - 1
+                    : currentCounts.benefited,
+              not_benefited:
+                type === 'not_benefited'
+                  ? currentCounts.not_benefited + 1
+                  : currentReaction === 'not_benefited'
+                    ? currentCounts.not_benefited - 1
+                    : currentCounts.not_benefited,
+            },
+          };
+        });
+        toast({
+          title: 'Success',
+          description: `Marked as ${type === 'benefited' ? 'Benefited' : 'Not Benefited'}.`,
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error('Reaction Error:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to manage reaction.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+
+  const renderResources = (resources) => {
+    const items = stringToList(resources);
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+    return items.map((item, index) => {
+      const parts = item.split(urlRegex).filter(Boolean);
+      return (
+        <ListItem key={index}>
+          {parts.map((part, i) =>
+            urlRegex.test(part) ? (
+              <Link
+                key={i}
+                href={part}
+                isExternal
+                color="teal.500"
+                _hover={{ textDecoration: 'underline' }}
+              >
+                {part}
+              </Link>
+            ) : (
+              <span key={i}>{part}</span>
+            )
+          )}
+        </ListItem>
+      );
+    });
+  };
+
+  const handleToggleContent = (postId) => {
+    setExpandedPosts((prev) =>
+      prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId]
+    );
+  };
+
 
   if (isLoading || !profileUser) {
     return (
@@ -279,28 +404,37 @@ const Profile = () => {
 
   return (
     <Container maxW="container.md" py={8}>
+
+
       {isOwnerProfile && (
-        <Flex justify="flex-end" mb={4}>
-          <IconButton
-            as={RouterLink}
-            to="/settings"
-            icon={<SettingsIcon boxSize={6} />}
-            aria-label="Settings"
-            variant="ghost"
-            _hover={{ bg: "teal.900" }}
-          />
-          <IconButton
-            as={RouterLink}
-            to="/favorites"
-            color="yellow.400"
-            icon={<StarIcon boxSize={6} />}
-            aria-label="favorites"
-            variant="ghost"
-            _hover={{ bg: "teal.900", borderColor: 'yellow.500' }}
-          />
+        <Flex justifyContent="space-between" mb={4}>
+          <Box>
+          </Box>
+          <Box>
+            <IconButton
+              as={RouterLink}
+              to="/settings"
+              icon={<SettingsIcon boxSize={6} />}
+              aria-label="Settings"
+              variant="ghost"
+              _hover={{ bg: "teal.900" }}
+            />
+            <IconButton
+              as={RouterLink}
+              to="/favorites"
+              color="yellow.400"
+              icon={<StarIcon boxSize={6} />}
+              aria-label="favorites"
+              variant="ghost"
+              _hover={{ bg: "teal.900", borderColor: 'yellow.500' }}
+            />
+          </Box>
+
         </Flex>
+
       )}
       <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'start' }} mb={6}>
+
         <Avatar
           size="xl"
           src={profileUser?.profileImage}
@@ -308,6 +442,7 @@ const Profile = () => {
           cursor={profileUser?.profileImage ? 'pointer' : 'default'}
           onClick={profileUser?.profileImage ? onImageOpen : undefined}
         />
+
         <Box ml={{ base: 0, md: 4 }} textAlign={{ base: 'center', md: 'left' }}>
           <Text fontSize="2xl" fontWeight="bold">
             {profileUser.firstName} {profileUser.lastName}
@@ -329,7 +464,6 @@ const Profile = () => {
                       ? 'purple.400'
                       : "blue.500"
                 }
-
                 boxSize={profileUser.point >= 10000 ? 7 : profileUser.point >= 1000 ? 6 : 6}
                 transition="color 0.2s"
                 aria-label={
@@ -341,8 +475,11 @@ const Profile = () => {
                 }
               />
             )}
+
           </Text>
+
           <Flex mt={2} gap={6} justify={{ base: 'center', md: 'flex-start' }}>
+
             <Text fontSize="md" onClick={handleNavegateFollowers} cursor="pointer">
               <Text as="span" fontWeight="bold">{followersCount}</Text> Followers
             </Text>
@@ -350,6 +487,11 @@ const Profile = () => {
               <Text as="span" fontWeight="bold">{followingCount}</Text> Following
             </Text>
           </Flex>
+          <Text mt={5}>
+            <Text as="span" fontWeight="bold" color="teal" fontSize={20} >Point
+              <Text as="span" color="yellow.500"> {profileUser.point}</Text>
+            </Text>
+          </Text>
           {!isOwnerProfile && (
             <Button
               mt={4}
@@ -364,8 +506,8 @@ const Profile = () => {
               {isFollowing ? 'Unfollow' : 'Follow'}
             </Button>
           )}
-
         </Box>
+
       </Flex>
       <VStack align="center" spacing={2} mb={6}>
         <Text>{profileUser?.bio || ''}</Text>
@@ -373,63 +515,66 @@ const Profile = () => {
 
       <Divider mt={6} />
 
-      {isOwnerProfile && (
-        <>
-          <Button
-            as={RouterLink}
-            to="/edit-profile"
-            colorScheme="teal"
-            size="lg"
-            width={{ base: '100%', md: '100%' }}
-            height={{ base: '40px', md: '40px' }}
-            fontSize={{ base: 'md', md: 'lg' }}
-            leftIcon={<EditIcon />}
-            mb={6}
-          >
-            Edit Profile
-          </Button>
-
-          <Divider mt={6} />
-          <Flex justify="center" width="100%" mb={6}>
-            <Flex
-              direction={{ base: 'column', md: 'row' }}
-              gap={4}
-              width="100%"
-              align="center"
+      {
+        isOwnerProfile && (
+          <>
+            <Button
+              as={RouterLink}
+              to="/edit-profile"
+              colorScheme="teal"
+              size="lg"
+              width={{ base: '100%', md: '100%' }}
+              height={{ base: '40px', md: '40px' }}
+              fontSize={{ base: 'md', md: 'lg' }}
+              leftIcon={<EditIcon />}
+              mb={6}
             >
-              <Button
-                as={RouterLink}
-                to="/create-post"
-                colorScheme="blue"
-                leftIcon={<AddIcon />}
-                width={{ base: '100%', md: '50%' }}
-                height={{ base: '40px', md: '40px' }}
-                fontSize={{ base: 'md', md: 'lg' }}
-              >
-                Create Post
-              </Button>
+              Edit Profile
+            </Button>
 
-              <Button
-                as={RouterLink}
-                to="/create-job"
-                colorScheme="purple"
-                leftIcon={<FaBriefcase />}
-                width={{ base: '100%', md: '50%' }}
-                height={{ base: '40px', md: '40px' }}
-                fontSize={{ base: 'md', md: 'lg' }}
+            <Divider mt={6} />
+            <Flex justify="center" width="100%" mb={6}>
+              <Flex
+                direction={{ base: 'column', md: 'row' }}
+                gap={4}
+                width="100%"
+                align="center"
               >
-                Create Job
-              </Button>
+
+                <Button
+                  as={RouterLink}
+                  to="/create-job"
+                  colorScheme="purple"
+                  leftIcon={<FaBriefcase />}
+                  width={{ base: '100%', md: '50%' }}
+                  height={{ base: '40px', md: '40px' }}
+                  fontSize={{ base: 'md', md: 'lg' }}
+                >
+                  Create Job
+                </Button>
+
+                <Button
+                  as={RouterLink}
+                  to="/create-post"
+                  colorScheme="blue"
+                  leftIcon={<AddIcon />}
+                  width={{ base: '100%', md: '50%' }}
+                  height={{ base: '40px', md: '40px' }}
+                  fontSize={{ base: 'md', md: 'lg' }}
+                >
+                  Create Post
+                </Button>
+              </Flex>
             </Flex>
-          </Flex>
-          <Divider mt={6} />
-        </>
-      )}
+            <Divider mt={6} />
+          </>
+        )
+      }
 
       <Tabs colorScheme="teal" mb={6}>
         <TabList>
-          <Tab flex={1}>Jobs</Tab>
-          <Tab flex={1}>Posts</Tab>
+          <Tab flex={1}><MdWork size={25} /></Tab>
+          <Tab flex={1}><FaBookOpen size={25} /></Tab>
         </TabList>
 
         <TabPanels>
@@ -440,7 +585,7 @@ const Profile = () => {
               <VStack spacing={6} align="stretch">
                 {jobs.map((job) => (
                   <Box
-                    key={job.id}
+                    key={`job-${job.id}`}
                     p={8}
                     minHeight="240px"
                     borderWidth={1}
@@ -450,45 +595,52 @@ const Profile = () => {
                     borderColor={borderColor}
                     position="relative"
                   >
-                    {/* Menu for actions */}
                     {user && (
-                      <Menu>
-                        <MenuButton
-                          as={IconButton}
-                          icon={<HamburgerIcon />}
+                      <>
+                        <Menu>
+                          <MenuButton
+                            as={IconButton}
+                            icon={<HamburgerIcon />}
+                            variant="ghost"
+                            size="sm"
+                            position="absolute"
+                            top={4}
+                            right={4}
+                            aria-label="Job options"
+                          />
+                          <MenuList>
+                            {Number(job.user?.id) === Number(user.id) ? (
+                              <>
+                                <MenuItem as={RouterLink} to={`/edit-job/${job.id}`}>
+                                  Edit
+                                </MenuItem>
+                                <MenuItem onClick={() => openDeleteModal(job.id, 'job')}>
+                                  Delete
+                                </MenuItem>
+                              </>
+                            ) : (
+                              <MenuItem onClick={() => handleFavorite(job.id)}>
+                                {favorites.includes(job.id) ? 'Remove from Favorites' : 'Add to Favorites'}
+                              </MenuItem>
+                            )}
+                          </MenuList>
+                        </Menu>
+                        <IconButton
+                          icon={favorites.includes(job.id) ? <FaHeart /> : <FaRegHeart />}
                           variant="ghost"
                           size="sm"
                           position="absolute"
                           top={4}
-                          right={4}
-                          aria-label="Job options"
+                          right={12}
+                          aria-label={favorites.includes(job.id) ? 'Remove from favorites' : 'Add to favorites'}
+                          color={favorites.includes(job.id) ? 'teal.500' : 'gray.500'}
+                          _hover={{ color: 'teal.600' }}
+                          onClick={() => handleFavorite(job.id)}
                         />
-                        <MenuList>
-                          {Number(job.user?.id) === Number(user.id) ? (
-                            <>
-                              <MenuItem as={RouterLink} to={`/jobs/edit/${job.id}`}>
-                                Edit
-                              </MenuItem>
-                              <MenuItem onClick={() => openDeleteModal(job.id)}>
-                                Delete
-                              </MenuItem>
-                            </>
-                          ) : (
-                            <MenuItem onClick={() => handleFavorite(job.id)}>
-                              {favorites.includes(job.id) ? 'Remove from Favorites' : 'Add to Favorites'}
-                            </MenuItem>
-                          )}
-                        </MenuList>
-                      </Menu>
+                      </>
                     )}
-
-                    {/* User Info */}
                     <Flex align="center" mb={6}>
-                      <Avatar
-                        size="md"
-                        src={job.user?.profileImage}
-                        mr={3}
-                      />
+                      <Avatar size="md" src={job.user?.profileImage} mr={3} />
                       <Box>
                         <Link
                           as={RouterLink}
@@ -504,8 +656,6 @@ const Profile = () => {
                         </Text>
                       </Box>
                     </Flex>
-
-                    {/* Job Details */}
                     <Heading
                       size="md"
                       mb={4}
@@ -516,13 +666,11 @@ const Profile = () => {
                     >
                       {job.title}
                     </Heading>
-
                     {job.short_intro && (
                       <Text color={textColor} mb={4}>
                         {truncateText(job.short_intro, 100)}
                       </Text>
                     )}
-
                     {job.responsibilities && (
                       <>
                         <Text fontWeight="semibold" mb={2}>
@@ -542,22 +690,22 @@ const Profile = () => {
                         </UnorderedList>
                       </>
                     )}
-
-                    {/* Apply Button */}
                     {job.email_applay && (
-                      <Button
-                        as="a"
-                        href={`mailto:${job.email_applay}?subject=Job Application - ${encodeURIComponent(job.title)}`}
-                        colorScheme="teal"
-                        size="lg"
-                        width={{ base: 'full', md: 'auto' }}
-                        height={{ base: '40px', md: '40px' }}
-                        borderRadius="md"
-                        mt={2}
-                        mb={4}
-                      >
-                        Apply via Email
-                      </Button>
+                      <Flex justifyContent="center">
+                        <Button
+                          as="a"
+                          href={`mailto:${job.email_applay}?subject=Job Application - ${encodeURIComponent(job.title)}`}
+                          colorScheme="teal"
+                          size="lg"
+                          width={{ base: 'full', md: '80%' }}
+                          height={{ base: '40px', md: '40px' }}
+                          borderRadius="md"
+                          mt={2}
+                          mb={4}
+                        >
+                          Apply via Email
+                        </Button>
+                      </Flex>
                     )}
                   </Box>
                 ))}
@@ -565,27 +713,164 @@ const Profile = () => {
             )}
           </TabPanel>
           <TabPanel>
-            {posts.length === 0 ? (
-              <Text>No posts available yet.</Text>
-            ) : (
-              <VStack spacing={4} align="stretch">
-                {posts.map((post) => (
-                  <Box
-                    key={post.id}
-                    p={4}
-                    borderWidth={1}
-                    borderRadius="md"
-                    boxShadow="sm"
-                    bg={bg}
-                    borderColor={borderColor}
-                  >
-                    <Text>{post.content}</Text>
-                    <Text fontSize="sm" color="gray.500">{post.date}</Text>
-                    <PostActions post={post} onComment={handleComment} onLike={handleLike} />
+            {posts.map((post) => (
+              <Box
+                key={`post-${post.id}`}
+                p={8}
+                minHeight="240px"
+                borderWidth={1}
+                borderRadius="md"
+                boxShadow="sm"
+                bg={bg}
+                borderColor={borderColor}
+                position="relative"
+              >
+                {user && Number(post.user?.id) === Number(user.id) && (
+                  <Menu>
+                    <MenuButton
+                      as={IconButton}
+                      icon={<HamburgerIcon />}
+                      variant="ghost"
+                      size="sm"
+                      position="absolute"
+                      top={4}
+                      right={4}
+                      aria-label="Post options"
+                    />
+                    <MenuList>
+                      <MenuItem as={RouterLink} to={`/edit-post/${post.id}`}>
+                        Edit
+                      </MenuItem>
+                      <MenuItem
+                        onClick={async () => {
+                          try {
+                            await api.delete(`/posts/${post.id}`);
+                            setPosts(posts.filter((p) => p.id !== post.id));
+                            toast({
+                              title: 'Success',
+                              description: 'Post deleted successfully.',
+                              status: 'success',
+                              duration: 5000,
+                              isClosable: true,
+                            });
+                          } catch (error) {
+                            toast({
+                              title: 'Error',
+                              description: error.response?.data?.message || 'Failed to delete post.',
+                              status: 'error',
+                              duration: 5000,
+                              isClosable: true,
+                            });
+                          }
+                        }}
+                      >
+                        Delete
+                      </MenuItem>
+                    </MenuList>
+                  </Menu>
+                )}
+                <Flex align="center" mb={6}>
+                  <Avatar size="md" src={post.user?.profileImage} mr={3} />
+                  <Box>
+                    <Link
+                      as={RouterLink}
+                      to={`/profile/${post.user?.id}`}
+                      fontWeight="bold"
+                      color="teal.500"
+                      _hover={{ textDecoration: 'underline' }}
+                    >
+                      {post.user?.firstName} {post.user?.lastName}
+                    </Link>
+                    <Text fontSize="sm" color="gray.500">
+                      {format(new Date(post.createdAt), 'hh:mm a')} -{' '}
+                      {dayjs(post.createdAt).format('YYYY-MM-DD')}
+                    </Text>
                   </Box>
-                ))}
-              </VStack>
-            )}
+                </Flex>
+                <Heading
+                  size="lg"
+                  mb={4}
+                  as={RouterLink}
+                  to={`/posts/${post.id}`}
+                  color="teal.500"
+                  _hover={{ textDecoration: 'underline' }}
+                >
+                  {post.title}
+                </Heading>
+                {post.content && (
+                  <Box mb={6}>
+                    <Text fontWeight="semibold" mb={2}>
+                      Content
+                    </Text>
+                    <Text color={textColor} whiteSpace="pre-wrap">
+                      {expandedPosts.includes(post.id)
+                        ? post.content
+                        : truncateText(post.content, 200)}
+                      {post.content.length > 200 && (
+                        <Link
+                          color="teal.500"
+                          _hover={{ textDecoration: 'underline' }}
+                          onClick={() => handleToggleContent(post.id)}
+                          ml={2}
+                        >
+                          {expandedPosts.includes(post.id) ? 'Show Less' : 'More'}
+                        </Link>
+                      )}
+                    </Text>
+                  </Box>
+                )}
+                {post.resources && (
+                  <Box mb={6}>
+                    <Text fontWeight="semibold" mb={2}>
+                      Resources
+                    </Text>
+                    <UnorderedList color={textColor} spacing={2}>
+                      {renderResources(post.resources)}
+                    </UnorderedList>
+                  </Box>
+                )}
+                {user && (
+                  <Box>
+                    <Flex gap={2} mb={2}>
+                      <Button
+                        colorScheme="green"
+                        size="sm"
+                        flex="1"
+                        opacity={
+                          userReactions[post.id] && userReactions[post.id] !== 'benefited' ? 0.5 : 1
+                        }
+                        onClick={() => handleReaction(post.id, 'benefited')}
+                      >
+                        Benefited {reactionCounts[post.id]?.benefited > 0 ? `(${reactionCounts[post.id].benefited})` : ''}
+                      </Button>
+                      <Button
+                        colorScheme="red"
+                        size="sm"
+                        variant="outline"
+                        flex="1"
+                        opacity={
+                          userReactions[post.id] && userReactions[post.id] !== 'not_benefited' ? 0.5 : 1
+                        }
+                        onClick={() => handleReaction(post.id, 'not_benefited')}
+                      >
+                        Not Benefited{' '}
+                        {reactionCounts[post.id]?.not_benefited > 0
+                          ? `(${reactionCounts[post.id].not_benefited})`
+                          : ''}
+                      </Button>
+                    </Flex>
+                    <Flex gap={4}>
+                      <Text fontSize="sm" color="teal.500">
+                        Benefited: {reactionCounts[post.id]?.benefited || 0}
+                      </Text>
+                      <Text fontSize="sm" color="red.500">
+                        Not Benefited: {reactionCounts[post.id]?.not_benefited || 0}
+                      </Text>
+                    </Flex>
+                  </Box>
+                )}
+              </Box>
+            ))}
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -624,19 +909,19 @@ const Profile = () => {
           <ModalHeader>Confirm Deletion</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <Text>Are you sure you want to delete this job?</Text>
+            <Text>Are you sure you want to delete this {deleteType === 'job' ? 'job' : 'post'}?</Text>
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={closeDeleteModal}>
               Cancel
             </Button>
-            <Button colorScheme="red" onClick={confirmDeleteJob}>
+            <Button colorScheme="red" onClick={confirmDelete}>
               Confirm
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </Container>
+    </Container >
   );
 };
 
