@@ -2,8 +2,7 @@ import axios from "axios";
 import Cookies from "js-cookie"
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_DOMAIN,
-  withCredentials: true
+  baseURL: process.env.REACT_APP_DOMAIN
 });
 
 api.interceptors.request.use(
