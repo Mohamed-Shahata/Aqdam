@@ -41,7 +41,7 @@ import { useNavigate, Link as RouterLink, useParams, Link } from 'react-router-d
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { AddIcon, EditIcon, HamburgerIcon, SettingsIcon, StarIcon } from '@chakra-ui/icons';
-import { FaBookOpen, FaBriefcase, FaHeart, FaRegHeart } from 'react-icons/fa';
+import { FaBookOpen, FaBriefcase } from 'react-icons/fa';
 import dayjs from 'dayjs';
 import { format } from 'date-fns';
 import { IoSparkles } from 'react-icons/io5';
@@ -77,12 +77,13 @@ const Profile = () => {
     queryFn: async () => {
       if (id) {
         const response = await api.get(`/users/${id}`);
-        console.log(response.data)
         return response.data;
       }
       return user;
     },
     enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
   });
 
   // Fetch followers and following counts
@@ -92,7 +93,9 @@ const Profile = () => {
       const response = await api.post(`/users/${Number(profileUser.id)}/followers`);
       return response.data;
     },
-    enabled: !!profileUser,
+    enabled: !!profileUser?.id,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
   });
 
   const { data: following = [], isLoading: isFollowingLoading } = useQuery({
@@ -101,7 +104,9 @@ const Profile = () => {
       const response = await api.post(`/users/${Number(profileUser.id)}/following`);
       return response.data;
     },
-    enabled: !!profileUser,
+    enabled: !!profileUser?.id,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
   });
 
   const isFollowing = followers.some((follower) => Number(follower.id) === Number(user?.id));
@@ -111,10 +116,11 @@ const Profile = () => {
     queryKey: ['jobs', profileUser?.id, jobsPage],
     queryFn: async () => {
       const response = await api.get(`/jobs/user/${Number(profileUser.id)}?page=${jobsPage}&limit=${limit}`);
-      console.log("jonss: ", response.data)
       return response.data;
     },
-    enabled: !!profileUser,
+    enabled: !!profileUser?.id,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
   });
 
   // Fetch user's posts with pagination
@@ -122,20 +128,19 @@ const Profile = () => {
     queryKey: ['posts', profileUser?.id, postsPage],
     queryFn: async () => {
       const response = await api.get(`/posts/user/${Number(profileUser.id)}?page=${postsPage}&limit=${limit}`);
-      console.log(response.data)
       return response.data;
     },
-    enabled: !!profileUser,
+    enabled: !!profileUser?.id,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
   });
 
   // Update jobs and posts when new data is fetched
   useEffect(() => {
-    if (jobsData && jobsData.length > 0) {
-      console.log("jobs", jobsData)
+    if (jobsData?.length > 0) {
       setJobs((prev) => {
         const newJobs = [...prev, ...jobsData];
-        const uniqueJobs = Array.from(new Map(newJobs.map((job) => [job.id, job])).values());
-        return uniqueJobs;
+        return Array.from(new Map(newJobs.map((job) => [job.id, job])).values());
       });
       setHasMoreJobs(jobsData.length === limit);
     } else {
@@ -144,11 +149,10 @@ const Profile = () => {
   }, [jobsData]);
 
   useEffect(() => {
-    if (postsData && postsData.length > 0) {
+    if (postsData?.length > 0) {
       setPosts((prev) => {
         const newPosts = [...prev, ...postsData];
-        const uniquePosts = Array.from(new Map(newPosts.map((post) => [post.id, post])).values());
-        return uniquePosts;
+        return Array.from(new Map(newPosts.map((post) => [post.id, post])).values());
       });
       setHasMorePosts(postsData.length === limit);
     } else {
@@ -157,22 +161,26 @@ const Profile = () => {
   }, [postsData]);
 
   // Fetch user's job favorites
-  const { data: favorites = [], isLoading: isFavoritesLoading } = useQuery({
+  const { data: favorites = [], isLoading: isFavoritesLoading, refetch } = useQuery({
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
       const response = await api.post('/jobs/favorites/me');
-      console.log("fav", response.data)
       return response.data.map((fav) => Number(fav.id));
     },
-    enabled: !!user,
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
   });
-
+  useEffect(() => {
+    if (user) {
+      refetch();
+    }
+  }, [user, refetch]);
   // Fetch user reactions
   const { data: userReactions = {}, isLoading: isReactionsLoading } = useQuery({
     queryKey: ['userReactions', user?.id],
     queryFn: async () => {
       const response = await api.get('/posts/reactions/me');
-      console.log(response.data)
       return Array.isArray(response.data)
         ? response.data.reduce((acc, reaction) => {
           acc[reaction.postId] = reaction.type;
@@ -180,7 +188,9 @@ const Profile = () => {
         }, {})
         : {};
     },
-    enabled: !!user,
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
   });
 
   // Fetch reaction counts for posts
@@ -197,7 +207,6 @@ const Profile = () => {
               not_benefited: response.data.not_benefited || 0,
             };
           } catch (error) {
-            console.error(`Failed to fetch reactions for post ${post.id}:`, error);
             reactionCountsData[post.id] = { benefited: 0, not_benefited: 0 };
           }
         })
@@ -205,6 +214,8 @@ const Profile = () => {
       return reactionCountsData;
     },
     enabled: !!posts.length,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
   });
 
   // Mutation for following/unfollowing
@@ -281,19 +292,18 @@ const Profile = () => {
         await api.post('/jobs/favorites', { jobId: Number(jobId) });
       }
     },
-    onSuccess: (_, jobId) => {
+    onMutate: async (jobId) => {
+      await queryClient.cancelQueries(['favorites', user?.id]);
+      const previousFavorites = queryClient.getQueryData(['favorites', user?.id]);
       queryClient.setQueryData(['favorites', user?.id], (old) =>
-        favorites.includes(jobId) ? old.filter((id) => Number(id) !== Number(jobId)) : [...old, Number(jobId)]
+        favorites.includes(jobId)
+          ? old.filter((id) => Number(id) !== Number(jobId))
+          : [...old, Number(jobId)]
       );
-      toast({
-        title: 'Success',
-        description: favorites.includes(jobId) ? 'Removed from job favorites.' : 'Added to job favorites.',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
+      return { previousFavorites };
     },
-    onError: (error) => {
+    onError: (error, jobId, context) => {
+      queryClient.setQueryData(['favorites', user?.id], context.previousFavorites);
       toast({
         title: 'Error',
         description: error.response?.data?.message || 'Failed to update favorites.',
@@ -301,6 +311,9 @@ const Profile = () => {
         duration: 5000,
         isClosable: true,
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(['favorites', user?.id]);
     },
   });
 
@@ -314,8 +327,14 @@ const Profile = () => {
         await api.post(`/posts/${postId}/reaction`, { type });
       }
     },
-    onSuccess: (_, { postId, type }) => {
+    onMutate: async ({ postId, type }) => {
+      await queryClient.cancelQueries(['userReactions', user?.id]);
+      await queryClient.cancelQueries(['reactionCounts']);
+      const previousReactions = queryClient.getQueryData(['userReactions', user?.id]);
+      const previousCounts = queryClient.getQueryData(['reactionCounts']);
       const currentReaction = userReactions[postId];
+
+      // Update user reactions
       queryClient.setQueryData(['userReactions', user?.id], (old) => {
         const newReactions = { ...old };
         if (currentReaction === type) {
@@ -325,42 +344,63 @@ const Profile = () => {
         }
         return newReactions;
       });
+
+      // Update reaction counts instantly
       queryClient.setQueryData(['reactionCounts'], (old) => {
         const currentCounts = old?.[postId] || { benefited: 0, not_benefited: 0 };
+        let newBenefited = currentCounts.benefited;
+        let newNotBenefited = currentCounts.not_benefited;
+
+        if (currentReaction === type) {
+          // Remove reaction
+          if (type === 'benefited') {
+            newBenefited = Math.max(0, currentCounts.benefited - 1);
+          } else {
+            newNotBenefited = Math.max(0, currentCounts.not_benefited - 1);
+          }
+        } else if (!currentReaction) {
+          // New reaction
+          if (type === 'benefited') {
+            newBenefited = currentCounts.benefited + 1;
+          } else {
+            newNotBenefited = currentCounts.not_benefited + 1;
+          }
+        } else {
+          // Switch reaction
+          if (type === 'benefited') {
+            newBenefited = currentCounts.benefited + 1;
+            newNotBenefited = Math.max(0, currentCounts.not_benefited - 1);
+          } else {
+            newNotBenefited = currentCounts.not_benefited + 1;
+            newBenefited = Math.max(0, currentCounts.benefited - 1);
+          }
+        }
+
         return {
           ...old,
           [postId]: {
-            benefited:
-              type === 'benefited'
-                ? currentCounts.benefited + 1
-                : currentReaction === 'benefited'
-                  ? currentCounts.benefited - 1
-                  : currentCounts.benefited,
-            not_benefited:
-              type === 'not_benefited'
-                ? currentCounts.not_benefited + 1
-                : currentReaction === 'not_benefited'
-                  ? currentCounts.not_benefited - 1
-                  : currentCounts.not_benefited,
+            benefited: newBenefited,
+            not_benefited: newNotBenefited,
           },
         };
       });
-      toast({
-        title: 'Success',
-        description: currentReaction === type ? 'Reaction removed.' : `Marked as ${type === 'benefited' ? 'Benefited' : 'Not Benefited'}.`,
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
+
+      return { previousReactions, previousCounts };
     },
-    onError: (error) => {
+    onError: (error, { postId }, context) => {
+      queryClient.setQueryData(['userReactions', user?.id], context.previousReactions);
+      queryClient.setQueryData(['reactionCounts'], context.previousCounts);
       toast({
         title: 'Error',
-        description: error.response?.data?.message || 'Failed to manage reaction.',
+        description: error.response?.data?.message || 'Failed to update reaction.',
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(['userReactions', user?.id]);
+      queryClient.invalidateQueries(['reactionCounts']);
     },
   });
 
@@ -691,7 +731,8 @@ const Profile = () => {
                             </MenuList>
                           </Menu>
                           <IconButton
-                            icon={favorites.includes(job.id) ? <FaHeart /> : <FaRegHeart />}
+                            icon={favorites.includes(job.id) ? <StarIcon color="yellow.500" /> : <StarIcon />}
+                            isLoading={favoriteMutation.isLoading}
                             variant="ghost"
                             size="sm"
                             position="absolute"
@@ -699,7 +740,7 @@ const Profile = () => {
                             right={12}
                             aria-label={favorites.includes(job.id) ? 'Remove from favorites' : 'Add to favorites'}
                             color={favorites.includes(job.id) ? 'teal.500' : 'gray.500'}
-                            _hover={{ color: 'teal.600' }}
+                            _hover={{ color: "yellow.100" }}
                             onClick={() => handleFavorite(job.id)}
                           />
                         </>
@@ -861,7 +902,6 @@ const Profile = () => {
                           <Text fontWeight="semibold" mb={2}>
                             Content
                           </Text>
-                          显著
                           <Text color={textColor} whiteSpace="pre-wrap">
                             {expandedPosts.includes(post.id)
                               ? post.content
@@ -910,9 +950,8 @@ const Profile = () => {
                               colorScheme="green"
                               size="sm"
                               flex="1"
-                              opacity={
-                                userReactions[post.id] && userReactions[post.id] !== 'benefited' ? 0.5 : 1
-                              }
+                              isLoading={reactionMutation.isLoading}
+                              opacity={userReactions[post.id] === 'benefited' ? 1 : 0.5}
                               onClick={() => handleReaction(post.id, 'benefited')}
                             >
                               <MdThumbUp size={20} />
@@ -922,9 +961,8 @@ const Profile = () => {
                               size="sm"
                               variant="outline"
                               flex="1"
-                              opacity={
-                                userReactions[post.id] && userReactions[post.id] !== 'not_benefited' ? 0.5 : 1
-                              }
+                              isLoading={reactionMutation.isLoading}
+                              opacity={userReactions[post.id] === 'not_benefited' ? 1 : 0.5}
                               onClick={() => handleReaction(post.id, 'not_benefited')}
                             >
                               <MdThumbDown size={20} />

@@ -1,7 +1,6 @@
 import {
   Box,
   Container,
-  Heading,
   VStack,
   Text,
   Spinner,
@@ -100,9 +99,6 @@ const Notifications = () => {
 
   return (
     <Container maxW="container.md" py={8}>
-      <Heading size="lg" mb={6}>
-        Notifications
-      </Heading>
       {validNotifications.length === 0 ? (
         <Text>No notifications yet.</Text>
       ) : (

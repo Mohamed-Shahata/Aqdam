@@ -22,7 +22,7 @@ import {
 } from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
 import { HamburgerIcon } from '@chakra-ui/icons';
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
@@ -36,10 +36,11 @@ const Favorites = () => {
   const textColor = useColorModeValue('gray.600', 'gray.300');
 
   // Fetch favorite jobs
-  const { data: favorites = [], isLoading } = useQuery({
+  const { data: favorites = [], isLoading, refetch } = useQuery({
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
       const response = await api.post('/jobs/favorites/me');
+      console.log(response.data)
       return Array.isArray(response.data) ? response.data : [];
     },
     enabled: !!user, // Only fetch if user is logged in
@@ -53,6 +54,12 @@ const Favorites = () => {
       });
     },
   });
+
+  useEffect(() => {
+    if (user) {
+      refetch();
+    }
+  }, [user, refetch]);
 
   // Mutation for removing favorite
   const removeFavoriteMutation = useMutation({
@@ -100,6 +107,8 @@ const Favorites = () => {
   const handleRemoveFavorite = (jobId) => {
     removeFavoriteMutation.mutate(jobId);
   };
+
+  console.log(favorites)
 
   if (isLoading) {
     return (

@@ -93,8 +93,8 @@ function Navbar() {
           mx="auto"
           px={{ base: 4, md: 0 }}
         >
-          <Link as={RouterLink} to="/home" fontSize="xl" fontWeight="bold" color="teal.500">
-            Aqdem
+          <Link fontFamily="heading" as={RouterLink} to="/home" fontSize="xl" fontWeight="bold" color="teal.500">
+            AQ
           </Link>
 
           <Flex alignItems="center">
