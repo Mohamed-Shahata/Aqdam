@@ -14,8 +14,9 @@ import {
   InputRightElement,
   IconButton,
 } from '@chakra-ui/react';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { useLocation, Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
 import { IoSparkles } from 'react-icons/io5';
@@ -24,9 +25,7 @@ import { SearchIcon } from '@chakra-ui/icons';
 
 const Search = () => {
   const { user: currentUser } = useContext(AuthContext);
-  const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
   const navigate = useNavigate();
   const bg = useColorModeValue('white', 'gray.800');
@@ -34,33 +33,28 @@ const Search = () => {
   const searchBg = useColorModeValue('gray.100', 'gray.700');
   const location = useLocation();
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setIsLoading(true);
-      try {
-        const query = new URLSearchParams(location.search).get('query');
-        if (!query) {
-          setUsers([]);
-          setIsLoading(false);
-          return;
-        }
-        const response = await api.get(`/users?search=${encodeURIComponent(query)}`);
-        setUsers(response.data);
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: error.response?.data?.message || 'Failed to fetch users.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        setUsers([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchUsers();
-  }, [location.search, toast]);
+  // Extract query from URL
+  const query = new URLSearchParams(location.search).get('query') || '';
+
+  // Fetch users based on search query
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ['searchUsers', query],
+    queryFn: async () => {
+      if (!query) return [];
+      const response = await api.get(`/users?search=${encodeURIComponent(query)}`);
+      return Array.isArray(response.data) ? response.data : [];
+    },
+    enabled: !!query, // Only fetch if there's a query
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to fetch users.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -75,23 +69,10 @@ const Search = () => {
     }
   };
 
-
   return (
     <Container maxW="container.md" py={8}>
-      <Flex
-        justify="center"
-        align="center"
-        w="100%"
-        py={2}
-      >
-        <Flex
-          flex={1}
-          maxW="600px"
-          w="100%"
-          align="center"
-          mt={-3}
-          mb={5}
-        >
+      <Flex justify="center" align="center" w="100%" py={2}>
+        <Flex flex={1} maxW="600px" w="100%" align="center" mt={-3} mb={5}>
           <InputGroup w="100%">
             <Input
               placeholder="Search for people..."
@@ -121,16 +102,18 @@ const Search = () => {
           <Spinner size="xl" />
         </Flex>
       ) : users.length === 0 ? (
-        <Text>No users found.</Text>
+        <Text textAlign="center" color="gray.500" mt={4}>
+          No users found.
+        </Text>
       ) : (
         <VStack spacing={4} align="stretch">
-          {users.filter(user => user.id !== currentUser.id).length === 0 ? (
+          {users.filter((user) => user.id !== currentUser?.id).length === 0 ? (
             <Text textAlign="center" color="gray.500" mt={4}>
               No users found.
             </Text>
           ) : (
             users
-              .filter(user => user.id !== currentUser.id)
+              .filter((user) => user.id !== currentUser?.id)
               .map((user) => (
                 <Box
                   key={user.id}
@@ -165,9 +148,8 @@ const Search = () => {
                                 ? 'yellow.500'
                                 : user.point >= 1000
                                   ? 'purple.400'
-                                  : "blue.500"
+                                  : 'blue.500'
                             }
-
                             boxSize={user.point >= 10000 ? 4 : user.point >= 1000 ? 4 : 4}
                             transition="color 0.2s"
                             aria-label={
@@ -188,7 +170,6 @@ const Search = () => {
                 </Box>
               ))
           )}
-
         </VStack>
       )}
     </Container>

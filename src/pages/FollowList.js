@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Box,
   Heading,
@@ -13,40 +13,39 @@ import {
   Avatar,
 } from '@chakra-ui/react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 import { Link as RouterLink } from 'react-router-dom';
 
 function FollowList() {
   const { type, id } = useParams(); // 'followers' or 'following'
-  const [users, setUsers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
   const bg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setIsLoading(true);
-      try {
-        const endpoint = type === 'followers' ? api.post(`/users/${id}/followers`) : api.post(`/users/${id}/following`);
-        const response = await endpoint;
-        setUsers(response.data);
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: error.response?.data?.message || `Failed to load ${type}`,
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        navigate('/profile');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchUsers();
-  }, [type, id, toast, navigate]);
+  // Fetch followers or following
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ['followList', type, id],
+    queryFn: async () => {
+      const endpoint =
+        type === 'followers'
+          ? api.post(`/users/${id}/followers`)
+          : api.post(`/users/${id}/following`);
+      const response = await endpoint;
+      return Array.isArray(response.data) ? response.data : [];
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || `Failed to load ${type}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      navigate('/profile');
+    },
+  });
 
   if (isLoading) {
     return (
@@ -58,12 +57,8 @@ function FollowList() {
 
   return (
     <Container maxW="container.md" py={8}>
-      <Heading mb={6}>{type === 'followers' ? "Followers" : "Following"}</Heading>
-      {isLoading ? (
-        <Flex justify="center" py={8}>
-          <Spinner size="xl" />
-        </Flex>
-      ) : users.length === 0 ? (
+      <Heading mb={6}>{type === 'followers' ? 'Followers' : 'Following'}</Heading>
+      {users.length === 0 ? (
         <Text>No users found.</Text>
       ) : (
         <VStack spacing={4} align="stretch">
@@ -80,11 +75,7 @@ function FollowList() {
               to={`/profile/${user.id}`}
             >
               <Flex align="center">
-                <Avatar
-                  size="md"
-                  src={user.profileImage}
-                  mr={4}
-                />
+                <Avatar size="md" src={user.profileImage} mr={4} />
                 <Box>
                   <Text fontWeight="bold">
                     {user.firstName} {user.lastName}

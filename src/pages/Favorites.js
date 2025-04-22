@@ -22,43 +22,69 @@ import {
 } from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
 import { HamburgerIcon } from '@chakra-ui/icons';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
 
 const Favorites = () => {
   const { user } = useContext(AuthContext);
-  const [favorites, setFavorites] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
+  const queryClient = useQueryClient();
   const bg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const textColor = useColorModeValue('gray.600', 'gray.300');
 
-  useEffect(() => {
-    const fetchFavorites = async () => {
-      setIsLoading(true);
-      try {
-        const response = await api.post('/jobs/favorites/me');
-        setFavorites(response.data);
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: error.response?.data?.message || 'Failed to fetch favorites.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    if (user) {
-      fetchFavorites();
-    } else {
-      setIsLoading(false);
-    }
-  }, [toast, user]);
+  // Fetch favorite jobs with caching
+  const { data: favorites = [], isLoading } = useQuery({
+    queryKey: ['favorites', user?.id],
+    queryFn: async () => {
+      const response = await api.post('/jobs/favorites/me');
+      return Array.isArray(response.data) ? response.data : [];
+    },
+    enabled: !!user, // Only fetch if user is logged in
+    staleTime: 5 * 60 * 1000, // Cache data for 5 minutes
+    cacheTime: 10 * 60 * 1000, // Keep data in cache for 10 minutes
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to fetch favorites.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
+
+  // Mutation for removing favorite
+  const removeFavoriteMutation = useMutation({
+    mutationFn: async (jobId) => {
+      await api.delete(`/jobs/favorites/${jobId}`);
+    },
+    onSuccess: (_, jobId) => {
+      // Update the cache manually
+      queryClient.setQueryData(['favorites', user?.id], (old) => {
+        if (!old) return [];
+        return old.filter((job) => Number(job.id) !== Number(jobId));
+      });
+      toast({
+        title: 'Success',
+        description: 'Removed from favorites.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to remove from favorites.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
 
   // Helper function to convert string to list items
   const stringToList = (str) => {
@@ -75,26 +101,8 @@ const Favorites = () => {
     return text.slice(0, maxLength) + '...';
   };
 
-  const handleRemoveFavorite = async (jobId) => {
-    try {
-      await api.delete(`/jobs/favorites/${jobId}`);
-      setFavorites(favorites.filter((job) => job.id !== jobId));
-      toast({
-        title: 'Success',
-        description: 'Removed from favorites.',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to remove from favorites.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
+  const handleRemoveFavorite = (jobId) => {
+    removeFavoriteMutation.mutate(jobId);
   };
 
   if (isLoading) {
@@ -119,12 +127,12 @@ const Favorites = () => {
         My Favorite Jobs
       </Heading>
       {favorites.length === 0 ? (
-        <Text>No favorite jobs yet.</Text>
+        <Text textAlign="center">No favorite jobs yet.</Text>
       ) : (
         <VStack spacing={6} align="stretch">
           {favorites.map((job) => (
             <Box
-              key={job.id}
+              key={`favorite-job-${job.id}`}
               p={8}
               minHeight="240px"
               borderWidth={1}
@@ -155,20 +163,18 @@ const Favorites = () => {
 
               {/* User Info */}
               <Flex align="center" mb={6}>
-                <Avatar
-                  size="md"
-                  src={job.user?.profileImage}
-                  mr={3}
-                />
-                <Link
-                  as={RouterLink}
-                  to={`/profile/${job.user?.id}`}
-                  fontWeight="bold"
-                  color="teal.500"
-                  _hover={{ textDecoration: 'underline' }}
-                >
-                  {job.user?.firstName} {job.user?.lastName}
-                </Link>
+                <Avatar size="md" src={job.user?.profileImage || ''} mr={3} />
+                <Box>
+                  <Link
+                    as={RouterLink}
+                    to={`/profile/${job.user?.id || ''}`}
+                    fontWeight="bold"
+                    color="teal.500"
+                    _hover={{ textDecoration: 'underline' }}
+                  >
+                    {job.user?.firstName || 'Unknown'} {job.user?.lastName || ''}
+                  </Link>
+                </Box>
               </Flex>
 
               {/* Job Details */}
@@ -180,7 +186,7 @@ const Favorites = () => {
                 color="teal.500"
                 _hover={{ textDecoration: 'underline' }}
               >
-                {job.title}
+                {job.title || 'Untitled Job'}
               </Heading>
 
               {job.short_intro && (
@@ -213,7 +219,7 @@ const Favorites = () => {
               {job.email_applay && (
                 <Button
                   as="a"
-                  href={`mailto:${job.email_applay}?subject=Job Application - ${encodeURIComponent(job.title)}`}
+                  href={`mailto:${job.email_applay}?subject=Job Application - ${encodeURIComponent(job.title || 'Untitled Job')}`}
                   colorScheme="teal"
                   size="lg"
                   width={{ base: 'full', md: 'auto' }}
@@ -226,7 +232,7 @@ const Favorites = () => {
               )}
 
               <Text fontSize="sm" color="gray.500">
-                Posted on: {new Date(job.createdAt).toLocaleDateString()}
+                Posted on: {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Unknown'}
               </Text>
             </Box>
           ))}

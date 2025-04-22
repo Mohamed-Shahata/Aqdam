@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useContext } from 'react';
 import {
   Heading,
   VStack,
@@ -16,36 +16,55 @@ import {
   useDisclosure,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AuthContext } from '../AuthContext';
 import api from '../api';
 
 function Settings() {
   const { logout } = useContext(AuthContext);
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const { isOpen: isLogoutOpen, onOpen: onLogoutOpen, onClose: onLogoutClose } = useDisclosure();
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const navigate = useNavigate();
   const toast = useToast();
+  const queryClient = useQueryClient();
+  const { isOpen: isLogoutOpen, onOpen: onLogoutOpen, onClose: onLogoutClose } = useDisclosure();
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const bg = useColorModeValue('white', 'gray.800');
 
-  const handleLogout = () => {
-    logout();
-    onLogoutClose();
-    toast({
-      title: 'Logged Out',
-      description: 'You have successfully logged out.',
-      status: 'success',
-      duration: 5000,
-      isClosable: true,
-    });
-    navigate('/login');
-  };
-
-  const handleDeleteAccount = async () => {
-    setIsDeletingAccount(true);
-    try {
-      await api.delete('/users');
+  // Mutation for logout
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      // Assuming logout doesn't require an API call, just calling the AuthContext logout
       logout();
+    },
+    onSuccess: () => {
+      queryClient.clear(); // Clear all cached queries on logout
+      toast({
+        title: 'Logged Out',
+        description: 'You have successfully logged out.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+      navigate('/login');
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to log out.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
+
+  // Mutation for deleting account
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      await api.delete('/users');
+    },
+    onSuccess: () => {
+      logout();
+      queryClient.clear(); // Clear all cached queries on account deletion
       toast({
         title: 'Account Deleted',
         description: 'Your account has been successfully deleted.',
@@ -54,7 +73,8 @@ function Settings() {
         isClosable: true,
       });
       navigate('/login');
-    } catch (error) {
+    },
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.response?.data?.message || 'Failed to delete account.',
@@ -62,26 +82,26 @@ function Settings() {
         duration: 5000,
         isClosable: true,
       });
-    } finally {
-      setIsDeletingAccount(false);
-    }
+    },
+  });
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+    onLogoutClose();
+  };
+
+  const handleDeleteAccount = () => {
+    deleteAccountMutation.mutate();
   };
 
   return (
     <Container maxW="container.md" py={8}>
       <Heading mb={6}>Settings</Heading>
       <VStack spacing={4} align="stretch" bg={bg} p={6} borderWidth={1} borderRadius="lg">
-        <Button
-          colorScheme="red"
-          variant="outline"
-          onClick={onLogoutOpen}
-        >
+        <Button colorScheme="red" variant="outline" onClick={onLogoutOpen}>
           Log Out
         </Button>
-        <Button
-          colorScheme="red"
-          onClick={onDeleteOpen}
-        >
+        <Button colorScheme="red" onClick={onDeleteOpen}>
           Delete Account
         </Button>
       </VStack>
@@ -100,13 +120,12 @@ function Settings() {
               colorScheme="red"
               mr={3}
               onClick={handleLogout}
+              isLoading={logoutMutation.isLoading}
+              loadingText="Logging Out"
             >
               Log Out
             </Button>
-            <Button
-              variant="ghost"
-              onClick={onLogoutClose}
-            >
+            <Button variant="ghost" onClick={onLogoutClose} isDisabled={logoutMutation.isLoading}>
               Cancel
             </Button>
           </ModalFooter>
@@ -127,7 +146,7 @@ function Settings() {
               colorScheme="red"
               mr={3}
               onClick={handleDeleteAccount}
-              isLoading={isDeletingAccount}
+              isLoading={deleteAccountMutation.isLoading}
               loadingText="Deleting"
             >
               Delete
@@ -135,7 +154,7 @@ function Settings() {
             <Button
               variant="ghost"
               onClick={onDeleteClose}
-              isDisabled={isDeletingAccount}
+              isDisabled={deleteAccountMutation.isLoading}
             >
               Cancel
             </Button>

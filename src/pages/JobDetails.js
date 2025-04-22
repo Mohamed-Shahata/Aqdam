@@ -26,9 +26,10 @@ import {
   ModalBody,
   ModalFooter,
 } from '@chakra-ui/react';
-import { Link as RouterLink } from 'react-router-dom';
-import React, { useContext, useEffect, useState } from 'react';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import React, { useContext, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { HamburgerIcon } from '@chakra-ui/icons';
 import { AuthContext } from '../AuthContext';
@@ -38,78 +39,129 @@ import { FaHeart, FaRegHeart } from 'react-icons/fa';
 
 const JobDetails = () => {
   const { id } = useParams();
-  const [job, setJob] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [favorites, setFavorites] = useState([]);
-  const [isUserLoading, setIsUserLoading] = useState(true);
-  const [jobIdToDelete, setJobIdToDelete] = useState(null);
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [jobIdToDelete, setJobIdToDelete] = useState(null);
   const toast = useToast();
+  const queryClient = useQueryClient();
   const bg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const textColor = useColorModeValue('gray.600', 'gray.300');
-  const { user } = useContext(AuthContext);
 
-  useEffect(() => {
-    const fetchJobAndFavorites = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch job details
-        const response = await api.get(`/jobs/${id}`);
-        setJob(response.data);
+  // Fetch job details
+  const { data: job, isLoading: isJobLoading } = useQuery({
+    queryKey: ['job', id],
+    queryFn: async () => {
+      const response = await api.get(`/jobs/${id}`);
+      return response.data;
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to fetch job details.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
 
-        // Check if user is available
-        if (user && user.id) {
-          setIsUserLoading(false);
-          try {
-            const favoritesResponse = await api.post('/jobs/favorites/me');
-            // Handle different response formats
-            let favoritesData = [];
-            if (Array.isArray(favoritesResponse.data)) {
-              favoritesData = favoritesResponse.data
-                .map((fav) => {
-                  const jobId = fav.jobId !== undefined ? fav.jobId : fav.id; // Handle jobId or id
-                  return jobId !== undefined && !isNaN(Number(jobId)) ? Number(jobId) : null;
-                })
-                .filter((id) => id !== null);
-            } else if (favoritesResponse.data.favorites && Array.isArray(favoritesResponse.data.favorites)) {
-              favoritesData = favoritesResponse.data.favorites
-                .map((fav) => {
-                  const jobId = fav.jobId !== undefined ? fav.jobId : fav.id;
-                  return jobId !== undefined && !isNaN(Number(jobId)) ? Number(jobId) : null;
-                })
-                .filter((id) => id !== null);
-            }
-            setFavorites(favoritesData);
-          } catch (favError) {
-            console.error('Favorites Error:', favError);
-            toast({
-              title: 'Error',
-              description: 'Failed to fetch favorites.',
-              status: 'error',
-              duration: 5000,
-              isClosable: true,
-            });
-            setFavorites([]);
-          }
-        } else {
-          setIsUserLoading(true);
-        }
-      } catch (error) {
-        console.error('Job Fetch Error:', error);
-        toast({
-          title: 'Error',
-          description: error.response?.data?.message || 'Failed to fetch job details.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-      } finally {
-        setIsLoading(false);
+  // Fetch user's job favorites
+  const { data: favorites = [], isLoading: isFavoritesLoading } = useQuery({
+    queryKey: ['favorites', user?.id],
+    queryFn: async () => {
+      const response = await api.post('/jobs/favorites/me');
+      let favoritesData = [];
+      if (Array.isArray(response.data)) {
+        favoritesData = response.data
+          .map((fav) => {
+            const jobId = fav.jobId !== undefined ? fav.jobId : fav.id;
+            return jobId !== undefined && !isNaN(Number(jobId)) ? Number(jobId) : null;
+          })
+          .filter((id) => id !== null);
+      } else if (response.data.favorites && Array.isArray(response.data.favorites)) {
+        favoritesData = response.data.favorites
+          .map((fav) => {
+            const jobId = fav.jobId !== undefined ? fav.jobId : fav.id;
+            return jobId !== undefined && !isNaN(Number(jobId)) ? Number(jobId) : null;
+          })
+          .filter((id) => id !== null);
       }
-    };
-    fetchJobAndFavorites();
-  }, [id, toast, user]);
+      return favoritesData;
+    },
+    enabled: !!user,
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to fetch favorites.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
+
+  // Mutation for handling favorites
+  const favoriteMutation = useMutation({
+    mutationFn: async (jobId) => {
+      if (favorites.includes(Number(jobId))) {
+        await api.delete(`/jobs/favorites/${jobId}`);
+      } else {
+        await api.post('/jobs/favorites', { jobId: Number(jobId) });
+      }
+    },
+    onSuccess: (_, jobId) => {
+      queryClient.setQueryData(['favorites', user?.id], (old) =>
+        favorites.includes(Number(jobId))
+          ? old.filter((id) => id !== Number(jobId))
+          : [...old, Number(jobId)]
+      );
+      toast({
+        title: 'Success',
+        description: favorites.includes(Number(jobId)) ? 'Removed from favorites.' : 'Added to favorites.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to manage favorite.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
+
+  // Mutation for deleting job
+  const deleteJobMutation = useMutation({
+    mutationFn: async (jobId) => {
+      await api.delete(`/jobs/${jobId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['jobs']); // Invalidate jobs to refresh related queries
+      navigate('/profile'); // Navigate back to profile after deletion
+      toast({
+        title: 'Success',
+        description: 'Job deleted successfully.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to delete job.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
 
   // Helper function to convert string to list items
   const stringToList = (str) => {
@@ -120,7 +172,7 @@ const JobDetails = () => {
       .filter((item) => item);
   };
 
-  const handleFavorite = async (jobId) => {
+  const handleFavorite = (jobId) => {
     if (!user || !user.id) {
       toast({
         title: 'Error',
@@ -131,62 +183,8 @@ const JobDetails = () => {
       });
       return;
     }
-    try {
-      if (favorites.includes(Number(jobId))) {
-        await api.delete(`/jobs/favorites/${jobId}`);
-        setFavorites(favorites.filter((id) => id !== Number(jobId)));
-        toast({
-          title: 'Success',
-          description: 'Removed from favorites.',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        await api.post('/jobs/favorites', { jobId });
-        setFavorites([...favorites, Number(jobId)]);
-        toast({
-          title: 'Success',
-          description: 'Added to favorites.',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      }
-    } catch (error) {
-      console.error('Favorite Error:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to manage favorite.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
+    favoriteMutation.mutate(jobId);
   };
-
-  const handleDeleteJob = async (jobId) => {
-    try {
-      await api.delete(`/jobs/${jobId}`);
-      setJob(null);
-      toast({
-        title: 'Success',
-        description: 'Job deleted successfully.',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to delete job.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  };
-
 
   const openDeleteModal = (jobId) => {
     setJobIdToDelete(jobId);
@@ -198,14 +196,14 @@ const JobDetails = () => {
     setJobIdToDelete(null);
   };
 
-  const confirmDeleteJob = async () => {
+  const confirmDeleteJob = () => {
     if (jobIdToDelete) {
-      await handleDeleteJob(jobIdToDelete);
+      deleteJobMutation.mutate(jobIdToDelete);
     }
     closeDeleteModal();
   };
 
-  if (isLoading) {
+  if (isJobLoading || isFavoritesLoading) {
     return (
       <Container maxW="container.md" py={8}>
         <Flex justify="center" py={8}>
@@ -235,9 +233,7 @@ const JobDetails = () => {
         position="relative"
       >
         {/* Menu and Favorite Icon */}
-        {isUserLoading ? (
-          <Spinner size="sm" position="absolute" top={4} right={4} />
-        ) : user && user.id ? (
+        {user && user.id ? (
           <>
             {/* Favorite Icon */}
             <Tooltip
@@ -255,6 +251,7 @@ const JobDetails = () => {
                 aria-label={favorites.includes(Number(job.id)) ? 'Remove from favorites' : 'Add to favorites'}
                 _hover={{ color: 'teal.600' }}
                 onClick={() => handleFavorite(job.id)}
+                isLoading={favoriteMutation.isLoading && favoriteMutation.variables === job.id}
               />
             </Tooltip>
             {/* Menu for Edit/Delete (only for job owner) */}

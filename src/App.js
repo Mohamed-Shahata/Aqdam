@@ -19,6 +19,17 @@ import JobDetails from "./pages/JobDetails";
 import Favorites from "./pages/Favorites";
 import Notifications from "./pages/Notifications";
 import PostDetails from "./pages/PostDetails";
+import Users from "./pages/Users";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // Cache data for 5 minutes
+      cacheTime: 10 * 60 * 1000, // Keep cache for 10 minutes
+    },
+  },
+});
 
 function App() {
   const { isLoading, isAuthenticated } = useContext(AuthContext);
@@ -31,32 +42,35 @@ function App() {
     )
   }
   return (
-    <Router>
-      <Box>
-        <Navbar />
-        <Routes>
-          <Route path="/" element={isAuthenticated ? <Navigate to="/home" /> : <Login />} />
-          <Route path="/login" element={isAuthenticated ? <Navigate to="/home" /> : <Login />} />
-          <Route path="/register" element={isAuthenticated ? <Navigate to="/home" /> : <Register />} />
-          <Route path="/verify-code" element={<VerifyCode />} />
-          <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
-          <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
-          <Route path="/profile/:id" element={<ProtectedRoute element={<Profile />} />} />
-          <Route path="/profile/:id/:type" element={<ProtectedRoute element={<FollowList />} />} />
-          <Route path="/search" element={<ProtectedRoute element={<Search />} />} />
-          <Route path="/edit-profile" element={<ProtectedRoute element={<EditProfile />} />} />
-          <Route path="/create-post" element={<ProtectedRoute element={<CreatePost />} />} />
-          <Route path="/create-job" element={<ProtectedRoute element={<CreateJob />} />} />
-          <Route path="/edit-job/:id" element={<ProtectedRoute element={<CreateJob />} />} />
-          <Route path="/edit-post/:id" element={<ProtectedRoute element={<CreatePost />} />} />
-          <Route path="/notifications" element={<ProtectedRoute element={<Notifications />} />} />
-          <Route path="/jobs/:id" element={<ProtectedRoute element={<JobDetails />} />} />
-          <Route path="/posts/:id" element={<ProtectedRoute element={<PostDetails />} />} />
-          <Route path="/favorites" element={<ProtectedRoute element={<Favorites />} />} />
-          <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
-        </Routes>
-      </Box>
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <Box>
+          <Navbar />
+          <Routes>
+            <Route path="/" element={isAuthenticated ? <Navigate to="/home" /> : <Login />} />
+            <Route path="/login" element={isAuthenticated ? <Navigate to="/home" /> : <Login />} />
+            <Route path="/register" element={isAuthenticated ? <Navigate to="/home" /> : <Register />} />
+            <Route path="/verify-code" element={<VerifyCode />} />
+            <Route path="/home" element={<ProtectedRoute element={<Home />} />} />
+            <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
+            <Route path="/profile/:id" element={<ProtectedRoute element={<Profile />} />} />
+            <Route path="/profile/:id/:type" element={<ProtectedRoute element={<FollowList />} />} />
+            <Route path="/search" element={<ProtectedRoute element={<Search />} />} />
+            <Route path="/edit-profile" element={<ProtectedRoute element={<EditProfile />} />} />
+            <Route path="/create-post" element={<ProtectedRoute element={<CreatePost />} />} />
+            <Route path="/create-job" element={<ProtectedRoute element={<CreateJob />} />} />
+            <Route path="/edit-job/:id" element={<ProtectedRoute element={<CreateJob />} />} />
+            <Route path="/edit-post/:id" element={<ProtectedRoute element={<CreatePost />} />} />
+            <Route path="/notifications" element={<ProtectedRoute element={<Notifications />} />} />
+            <Route path="/jobs/:id" element={<ProtectedRoute element={<JobDetails />} />} />
+            <Route path="/users" element={<ProtectedRoute element={<Users />} />} />
+            <Route path="/posts/:id" element={<ProtectedRoute element={<PostDetails />} />} />
+            <Route path="/favorites" element={<ProtectedRoute element={<Favorites />} />} />
+            <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
+          </Routes>
+        </Box>
+      </Router>
+    </QueryClientProvider>
   );
 }
 

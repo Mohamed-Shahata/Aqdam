@@ -19,63 +19,173 @@ import {
   MenuItem,
 } from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
-import React, { useContext, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useContext } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
 import { HamburgerIcon } from '@chakra-ui/icons';
 import dayjs from 'dayjs';
 import { format } from 'date-fns';
+import { MdThumbDown, MdThumbUp } from 'react-icons/md';
 
 const PostDetails = () => {
   const { id } = useParams();
   const { user } = useContext(AuthContext);
-  const [post, setPost] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [userReactions, setUserReactions] = useState({});
-  const [reactionCounts, setReactionCounts] = useState({ benefited: 0, not_benefited: 0 });
+  const navigate = useNavigate();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const bg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const textColor = useColorModeValue('gray.600', 'gray.300');
 
-  useEffect(() => {
-    const fetchPost = async () => {
-      setIsLoading(true);
-      try {
-        const postResponse = await api.get(`/posts/${id}`);
-        setPost(postResponse.data);
+  // Fetch post details
+  const { data: post, isLoading: isPostLoading } = useQuery({
+    queryKey: ['post', id],
+    queryFn: async () => {
+      const response = await api.get(`/posts/${id}`);
+      return response.data;
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to fetch post details.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
 
-        const reactionResponse = await api.get(`/posts/${id}/reactions`);
-        setReactionCounts({
-          benefited: reactionResponse.data.benefited || 0,
-          not_benefited: reactionResponse.data.not_benefited || 0,
-        });
+  // Fetch reaction counts for the post
+  const { data: reactionCounts = { benefited: 0, not_benefited: 0 }, isLoading: isReactionCountsLoading } = useQuery({
+    queryKey: ['reactionCounts', id],
+    queryFn: async () => {
+      const response = await api.get(`/posts/${id}/reactions`);
+      return {
+        benefited: response.data.benefited || 0,
+        not_benefited: response.data.not_benefited || 0,
+      };
+    },
+    enabled: !!post,
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to fetch reaction counts.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
 
-        if (user) {
-          const reactionsResponse = await api.get('/posts/reactions/me');
-          const userReactionsData = Array.isArray(reactionsResponse.data)
-            ? reactionsResponse.data.reduce((acc, reaction) => {
-              acc[reaction.postId] = reaction.type;
-              return acc;
-            }, {})
-            : {};
-          setUserReactions(userReactionsData);
-        }
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: error.response?.data?.message || 'Failed to fetch post details.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-      } finally {
-        setIsLoading(false);
+  // Fetch user reactions
+  const { data: userReactions = {}, isLoading: isUserReactionsLoading } = useQuery({
+    queryKey: ['userReactions', user?.id],
+    queryFn: async () => {
+      const response = await api.get('/posts/reactions/me');
+      return Array.isArray(response.data)
+        ? response.data.reduce((acc, reaction) => {
+          acc[reaction.postId] = reaction.type;
+          return acc;
+        }, {})
+        : {};
+    },
+    enabled: !!user,
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to fetch user reactions.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
+
+  // Mutation for handling reactions
+  const reactionMutation = useMutation({
+    mutationFn: async ({ postId, type }) => {
+      const currentReaction = userReactions[postId];
+      if (currentReaction === type) {
+        await api.delete(`/posts/${postId}/reaction`);
+      } else {
+        await api.post(`/posts/${postId}/reaction`, { type });
       }
-    };
-    fetchPost();
-  }, [id, toast, user]);
+    },
+    onSuccess: (_, { postId, type }) => {
+      const currentReaction = userReactions[postId];
+      queryClient.setQueryData(['userReactions', user?.id], (old) => {
+        const newReactions = { ...old };
+        if (currentReaction === type) {
+          delete newReactions[postId];
+        } else {
+          newReactions[postId] = type;
+        }
+        return newReactions;
+      });
+      queryClient.setQueryData(['reactionCounts', postId], (old) => {
+        const currentCounts = old || { benefited: 0, not_benefited: 0 };
+        return {
+          benefited:
+            type === 'benefited'
+              ? currentCounts.benefited + 1
+              : currentReaction === 'benefited'
+                ? currentCounts.benefited - 1
+                : currentCounts.benefited,
+          not_benefited:
+            type === 'not_benefited'
+              ? currentCounts.not_benefited + 1
+              : currentReaction === 'not_benefited'
+                ? currentCounts.not_benefited - 1
+                : currentCounts.not_benefited,
+        };
+      });
+      toast({
+        title: 'Success',
+        description: currentReaction === type ? 'Reaction removed.' : `Marked as ${type === 'benefited' ? 'Benefited' : 'Not Benefited'}.`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to manage reaction.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
+
+  // Mutation for deleting post
+  const deletePostMutation = useMutation({
+    mutationFn: async () => {
+      await api.delete(`/posts/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['posts']); // Invalidate posts to refresh related queries
+      navigate('/profile'); // Navigate back to profile after deletion
+      toast({
+        title: 'Success',
+        description: 'Post deleted successfully.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to delete post.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
 
   // Helper function to convert string to list items
   const stringToList = (str) => {
@@ -114,67 +224,11 @@ const PostDetails = () => {
     });
   };
 
-  const handleReaction = async (postId, type) => {
-    try {
-      const currentReaction = userReactions[postId];
-      if (currentReaction === type) {
-        // Remove reaction
-        await api.delete(`/posts/${postId}/reaction`);
-        setUserReactions((prev) => {
-          const newReactions = { ...prev };
-          delete newReactions[postId];
-          return newReactions;
-        });
-        setReactionCounts((prev) => ({
-          ...prev,
-          [type]: prev[type] - 1,
-        }));
-        toast({
-          title: 'Success',
-          description: 'Reaction removed.',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        // Add or update reaction
-        await api.post(`/posts/${postId}/reaction`, { type });
-        setUserReactions((prev) => ({ ...prev, [postId]: type }));
-        setReactionCounts((prev) => ({
-          benefited:
-            type === 'benefited'
-              ? prev.benefited + 1
-              : currentReaction === 'benefited'
-                ? prev.benefited - 1
-                : prev.benefited,
-          not_benefited:
-            type === 'not_benefited'
-              ? prev.not_benefited + 1
-              : currentReaction === 'not_benefited'
-                ? prev.not_benefited - 1
-                : prev.not_benefited,
-        }));
-        toast({
-          title: 'Success',
-          description: `Marked as ${type === 'benefited' ? 'Benefited' : 'Not Benefited'}.`,
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      }
-    } catch (error) {
-      console.error('Reaction Error:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to manage reaction.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
+  const handleReaction = (postId, type) => {
+    reactionMutation.mutate({ postId, type });
   };
 
-  if (isLoading) {
+  if (isPostLoading || isReactionCountsLoading || isUserReactionsLoading) {
     return (
       <Container maxW="container.md" py={8}>
         <Flex justify="center" py={8}>
@@ -220,29 +274,7 @@ const PostDetails = () => {
               <MenuItem as={RouterLink} to={`/edit-post/${post.id}`}>
                 Edit
               </MenuItem>
-              <MenuItem
-                onClick={async () => {
-                  try {
-                    await api.delete(`/posts/${post.id}`);
-                    setPost(null);
-                    toast({
-                      title: 'Success',
-                      description: 'Post deleted successfully.',
-                      status: 'success',
-                      duration: 5000,
-                      isClosable: true,
-                    });
-                  } catch (error) {
-                    toast({
-                      title: 'Error',
-                      description: error.response?.data?.message || 'Failed to delete post.',
-                      status: 'error',
-                      duration: 5000,
-                      isClosable: true,
-                    });
-                  }
-                }}
-              >
+              <MenuItem onClick={() => deletePostMutation.mutate()}>
                 Delete
               </MenuItem>
             </MenuList>
@@ -298,6 +330,21 @@ const PostDetails = () => {
         )}
         {user && (
           <Box>
+            <Flex gap={4} mb={5}>
+              <Flex align="center" fontSize="sm" color="teal.500">
+                <MdThumbUp size={20} />
+                <Text as="span" ml={3}>
+                  {reactionCounts.benefited}
+                </Text>
+              </Flex>
+              <Flex align="center" fontSize="sm" color="red.500">
+                <MdThumbDown size={20} />
+                <Text as="span" ml={3}>
+                  {reactionCounts.not_benefited}
+                </Text>
+              </Flex>
+            </Flex>
+
             <Flex gap={2} mb={2}>
               <Button
                 colorScheme="green"
@@ -305,29 +352,21 @@ const PostDetails = () => {
                 flex="1"
                 opacity={userReactions[post.id] && userReactions[post.id] !== 'benefited' ? 0.5 : 1}
                 onClick={() => handleReaction(post.id, 'benefited')}
+                isLoading={reactionMutation.isLoading && reactionMutation.variables?.postId === post.id}
               >
-                Benefited {reactionCounts.benefited > 0 ? `(${reactionCounts.benefited})` : ''}
+                <MdThumbUp size={20} />
               </Button>
               <Button
                 colorScheme="red"
                 size="sm"
                 variant="outline"
                 flex="1"
-                opacity={
-                  userReactions[post.id] && userReactions[post.id] !== 'not_benefited' ? 0.5 : 1
-                }
+                opacity={userReactions[post.id] && userReactions[post.id] !== 'not_benefited' ? 0.5 : 1}
                 onClick={() => handleReaction(post.id, 'not_benefited')}
+                isLoading={reactionMutation.isLoading && reactionMutation.variables?.postId === post.id}
               >
-                Not Benefited {reactionCounts.not_benefited > 0 ? `(${reactionCounts.not_benefited})` : ''}
+                <MdThumbDown size={20} />
               </Button>
-            </Flex>
-            <Flex gap={4}>
-              <Text fontSize="sm" color="teal.500">
-                Benefited: {reactionCounts.benefited}
-              </Text>
-              <Text fontSize="sm" color="red.500">
-                Not Benefited: {reactionCounts.not_benefited}
-              </Text>
             </Flex>
           </Box>
         )}

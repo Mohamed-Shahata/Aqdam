@@ -18,9 +18,9 @@ import {
   useDisclosure,
   VStack,
 } from '@chakra-ui/react';
-import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
-import { FaHome, FaList, FaSignInAlt, FaUser, FaUserPlus } from 'react-icons/fa';
+import { FaHome, FaList, FaSignInAlt, FaUser, FaUserPlus, FaUsers } from 'react-icons/fa';
 import ColorModeToggle from './ColorModeToggle';
 import { BellIcon, SearchIcon, SettingsIcon } from '@chakra-ui/icons';
 import api from '../api';
@@ -34,12 +34,11 @@ function Navbar() {
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const searchBg = useColorModeValue('gray.100', 'gray.700');
   const navigate = useNavigate();
-  const location = useLocation();
 
   // Bell color based on unread notifications
   const bellColor = useColorModeValue(
-    notifications.filter((n) => !n.isRead).length > 0 ? 'yellow.500' : 'gray.500',
-    notifications.filter((n) => !n.isRead).length > 0 ? 'yellow.300' : 'gray.300'
+    notifications.length > 0 && notifications.filter((n) => !n.isRead).length > 0 ? 'yellow.500' : 'gray.500',
+    notifications.length > 0 && notifications.filter((n) => !n.isRead).length > 0 ? 'yellow.300' : 'gray.300'
   );
 
   // Fetch notifications
@@ -60,7 +59,7 @@ function Navbar() {
     };
 
     fetchNotifications();
-  }, [isAuthenticated, location.pathname]); // Refetch when location changes
+  }, [isAuthenticated]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -99,7 +98,6 @@ function Navbar() {
           </Link>
 
           <Flex alignItems="center">
-
             {isAuthenticated && (
               <Button
                 as={RouterLink}
@@ -110,7 +108,7 @@ function Navbar() {
                 mr={2}
               >
                 <BellIcon boxSize={6} color={bellColor} />
-                {notifications.filter((n) => !n.isRead).length > 0 && (
+                {notifications.length > 0 && notifications.filter((n) => !n.isRead).length > 0 && (
                   <Box
                     position="absolute"
                     top={0}
@@ -140,6 +138,18 @@ function Navbar() {
               mr={2}
             />
             <Flex alignItems="center" display={{ base: 'none', md: 'flex' }}>
+              {isAuthenticated && (
+                <Button
+                  as={RouterLink}
+                  to="/users"
+                  colorScheme="teal"
+                  variant="ghost"
+                  leftIcon={<Icon as={FaUsers} />}
+                  mx={1}
+                >
+                  Users
+                </Button>
+              )}
               {isAuthenticated ? (
                 <>
                   <Button
@@ -172,9 +182,9 @@ function Navbar() {
                   >
                     Settings
                   </Button>
-                  <Button as={RouterLink} to="/notifications" variant="ghost" position="relative">
+                  <Button as={RouterLink} to="/notifications" variant="ghost" position="relative" mx={1}>
                     <BellIcon boxSize={6} color={bellColor} />
-                    {notifications.filter((n) => !n.isRead).length > 0 && (
+                    {notifications.length > 0 && notifications.filter((n) => !n.isRead).length > 0 && (
                       <Box
                         position="absolute"
                         top={0}
@@ -234,6 +244,16 @@ function Navbar() {
             <VStack spacing={4} align="stretch">
               {isAuthenticated && (
                 <>
+                  <Button
+                    as={RouterLink}
+                    to="/users"
+                    colorScheme="teal"
+                    variant="ghost"
+                    leftIcon={<Icon as={FaUsers} />}
+                    onClick={onDrawerClose}
+                  >
+                    Users
+                  </Button>
                   <InputGroup>
                     <Input
                       placeholder="Search for people..."
@@ -265,7 +285,7 @@ function Navbar() {
                     position="relative"
                   >
                     Notifications
-                    {notifications.filter((n) => !n.isRead).length > 0 && (
+                    {notifications.length > 0 && notifications.filter((n) => !n.isRead).length > 0 && (
                       <Box
                         position="absolute"
                         top={2}
