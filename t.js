@@ -1,398 +1,348 @@
-import {
-  Box,
-  Container,
-  Heading,
-  Text,
-  Spinner,
-  Flex,
-  Avatar,
-  useColorModeValue,
-  useToast,
-  UnorderedList,
-  ListItem,
-  Link,
-  Button,
-  Menu,
-  IconButton,
-  MenuButton,
-  MenuList,
-  MenuItem,
-} from '@chakra-ui/react';
-import { Link as RouterLink } from 'react-router-dom';
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Avatar, Box, Button, Container, Flex, FormControl, FormLabel, Heading, HStack, IconButton, Input, useColorModeValue, useToast, VStack } from '@chakra-ui/react';
+import React, { useContext, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { HamburgerIcon, StarIcon } from '@chakra-ui/icons';
-import dayjs from 'dayjs';
-import { format } from 'date-fns';
+import { AuthContext } from '../AuthContext';
+import { FaCamera, FaFileUpload } from 'react-icons/fa';
+import { DeleteIcon } from '@chakra-ui/icons';
+import axios from 'axios';
+import Cookies from "js-cookie"
 
-const PostDetails = () => {
-  const { id } = useParams();
-  const [post, setPost] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFavorite, setIsFavorite] = useState(false);
+function EditProfile() {
+  const { user, updateUser } = useContext(AuthContext);
+
+
+  const [newData, setNewData] = useState({
+    firstName: '',
+    lastName: '',
+    bio: '',
+    age: ''
+  });
+
+  const [newAvatar, setNewAvatar] = useState(user.profileImage);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDeletingAvatar, setIsDeleteAvatar] = useState(false);
+  const navigate = useNavigate();
   const toast = useToast();
   const bg = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const textColor = useColorModeValue('gray.600', 'gray.300');
-  const [userReactions, setUserReactions] = useState({});
+  // const borderColor = useColorModeValue('gray.200', 'gray.600');
+
 
   useEffect(() => {
-    const fetchPostAndFavorites = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch post details
-        const postResponse = await api.get(`/posts/${id}`);
-        setPost(postResponse.data);
-
-        // Fetch favorites to check if post is favorited
-        const favoritesResponse = await api.get('/favorites/me');
-        const favorites = Array.isArray(favoritesResponse.data) ? favoritesResponse.data : [];
-        const isPostFavorite = favorites.some((fav) => Number(fav.postId) === Number(id));
-        setIsFavorite(isPostFavorite);
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: error.response?.data?.message || 'Failed to fetch post details or favorites.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchPostAndFavorites();
-  }, [id, toast]);
-
-  // Helper function to convert string to list items
-  const stringToList = (str) => {
-    if (!str) return [];
-    // Split by newlines or commas, and trim whitespace
-    return str
-      .split(/[\n,]+/)
-      .map((item) => item.trim())
-      .filter((item) => item);
-  };
-
-  // Helper function to render resources with clickable links
-  const renderResources = (resources) => {
-    const items = stringToList(resources);
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-
-    return items.map((item, index) => {
-      const parts = item.split(urlRegex).filter(Boolean);
-      return (
-        <ListItem key={index}>
-          {parts.map((part, i) =>
-            urlRegex.test(part) ? (
-              <Link
-                key={i}
-                href={part}
-                isExternal
-                color="teal.500"
-                _hover={{ textDecoration: 'underline' }}
-              >
-                {part}
-              </Link>
-            ) : (
-              <span key={i}>{part}</span>
-            )
-          )}
-        </ListItem>
-      );
-    });
-  };
-
-  const handleReaction = async (postId, type) => {
-    try {
-      if (userReactions[postId] === type) {
-        // Remove reaction
-        await api.delete(`/posts/${postId}/reaction`);
-        setUserReactions((prev) => {
-          const newReactions = { ...prev };
-          delete newReactions[postId];
-          return newReactions;
-        });
-        toast({
-          title: 'Success',
-          description: 'Reaction removed.',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        // Add or update reaction
-        await api.post(`/posts/${postId}/reaction`, { type });
-        setUserReactions((prev) => ({ ...prev, [postId]: type }));
-        toast({
-          title: 'Success',
-          description: `Marked as ${type === 'benefited' ? 'Benefited' : 'Not Benefited'}.`,
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      }
-    } catch (error) {
-      console.error('Reaction Error:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to manage reaction.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
+    if (user) {
+      setNewData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        bio: user.bio || '',
+        age: user.age || '',
       });
+    }
+  }, [user]);
+
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setNewAvatar(file);
     }
   };
 
-  const toggleFavorite = async () => {
-    try {
-      if (isFavorite) {
-        // Remove from favorites
-        await api.delete(`/favorites/${id}`);
-        setIsFavorite(false);
-        toast({
-          title: 'Success',
-          description: 'Removed from favorites.',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        // Add to favorites
-        await api.post('/favorites', { postId: id });
-        setIsFavorite(true);
-        toast({
-          title: 'Success',
-          description: 'Added to favorites.',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      }
-    } catch (error) {
-      console.error('Favorite Error:', error);
+  const handleUploadAvatar = async () => {
+    if (!newAvatar) {
       toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to manage favorite.',
-        status: 'error',
+        title: "Error",
+        description: "Select your image first",
+        status: "error",
         duration: 5000,
-        isClosable: true,
+        isClosable: true
       });
+      return;
+    }
+
+    setIsUploading(true)
+    try {
+      const formData = new FormData();
+      formData.append('user-image', newAvatar);
+      const token = Cookies.get("token");
+      const response = await axios.post("https://aqdambackend-production.up.railway.app/api/users/images/upload-image", formData, {
+        withCredentials: true,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      const newImageUrl = response.data.imageUrl;
+
+      const userRes = await api.get("/users");
+      updateUser(userRes.data[0]);
+      setNewAvatar(newImageUrl);
+      toast({
+        title: "Updated profile successful 🎉",
+        description: "Profile image updated successful",
+        status: "success",
+        duration: 5000,
+        isClosable: true
+      });
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "Something went wrong"
+      toast({
+        title: "Error",
+        description: errorMessage,
+        status: "error",
+        duration: 5000,
+        isClosable: true
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <Container maxW="container.md" py={8}>
-        <Flex justify="center" py={8}>
-          <Spinner size="xl" />
-        </Flex>
-      </Container>
-    );
+  const handleDeleteAvatar = async () => {
+    setIsDeleteAvatar(true);
+    try {
+      const token = Cookies.get("token");
+      await axios.delete("https://aqdambackend-production.up.railway.app/api/users/images/delete-image", {
+        withCredentials: true,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      updateUser(({ profileImage: '' }));
+      setNewAvatar(null);
+
+      toast({
+        title: "Deleted successfuly 🎉",
+        description: "Deleted profile image successful",
+        status: "success",
+        duration: 5000,
+        isClosable: true
+      });
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "Something went wrong"
+      toast({
+        title: "Error",
+        description: errorMessage,
+        status: "error",
+        duration: 5000,
+        isClosable: true
+      });
+    } finally {
+      setIsDeleteAvatar(false);
+    }
+  };
+
+
+  const handleSave = async () => {
+    setIsUpdating(true);
+    try {
+      const updateData = {};
+      if (newData.firstName !== user.firstName) updateData.firstName = newData.firstName
+      if (newData.lastName !== user.lastName) updateData.lastName = newData.lastName
+      if (newData.bio !== user.bio) updateData.bio = newData.bio
+      if (newData.age !== user.age) updateData.age = Number(newData.age)
+
+      if (Object.keys(updateData).length === 0) {
+        toast({
+          title: "Not updated anything",
+          description: "not updated",
+          status: "info",
+          duration: 5000,
+          isClosable: true
+        });
+        navigate("/profile");
+        return;
+      }
+
+      await api.patch("/users", updateData);
+      updateUser(updateData);
+      toast({
+        title: "Updated successful 🎉",
+        description: "Profile updated successful",
+        status: "success",
+        duration: 5000,
+        isClosable: true
+      });
+      navigate("/profile");
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "Something went wrong"
+      toast({
+        title: "Error",
+        description: errorMessage,
+        status: "error",
+        duration: 5000,
+        isClosable: true
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCancel = () => {
+    navigate("/profile")
   }
-
-  if (!post) {
-    return (
-      <Container maxW="container.md" py={8}>
-        <Text>Post not found.</Text>
-      </Container>
-    );
-  }
-
-  const objectivesList = stringToList(post.objectives_learn);
-  const isLongList = objectivesList.length > 5;
-
   return (
     <Container maxW="container.md" py={8}>
-      <Box
-        key={`post-${post.id}`}
-        p={8}
-        minHeight="240px"
-        borderWidth={1}
-        borderRadius="md"
-        boxShadow="sm"
-        bg={bg}
-        borderColor={borderColor}
-        position="relative"
-      >
-        {post.user && Number(post.user?.id) === Number(post.user.id) && (
-          <Menu>
-            <MenuButton
-              as={IconButton}
-              icon={<HamburgerIcon />}
-              variant="ghost"
-              size="sm"
-              position="absolute"
-              top={4}
-              right={4}
-              aria-label="Post options"
-            />
-            <MenuList>
-              <MenuItem as={RouterLink} to={`/edit-post/${post.id}`}>
-                Edit
-              </MenuItem>
-              <MenuItem
-                onClick={async () => {
-                  try {
-                    await api.delete(`/posts/${post.id}`);
-                    setPost(null);
-                    toast({
-                      title: 'Success',
-                      description: 'Post deleted successfully.',
-                      status: 'success',
-                      duration: 5000,
-                      isClosable: true,
-                    });
-                  } catch (error) {
-                    toast({
-                      title: 'Error',
-                      description: error.response?.data?.message || 'Failed to delete post.',
-                      status: 'error',
-                      duration: 5000,
-                      isClosable: true,
-                    });
-                  }
-                }}
+      <Heading mb={8}>Edit Profile</Heading>
+
+      {/* Profile Picture Section */}
+      <VStack spacing={4} align="center" mb={10}>
+        <Box position="relative">
+          <Avatar
+            size="2xl"
+            src={newAvatar instanceof File ? URL.createObjectURL(newAvatar) : user?.profileImage}
+            borderWidth={2}
+            borderColor={useColorModeValue('gray.200', 'gray.600')}
+          />
+          <Input
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarChange}
+            display="none"
+            id="avatar-upload"
+            isDisabled={isUploading || isDeletingAvatar}
+          />
+          <IconButton
+            as="label"
+            htmlFor="avatar-upload"
+            icon={<FaCamera />}
+            aria-label="Change profile picture"
+            size="sm"
+            colorScheme="teal"
+            borderRadius="full"
+            position="absolute"
+            bottom={0}
+            right={0}
+            boxShadow="md"
+            _hover={{ bg: "teal.500" }}
+            cursor="pointer"
+          />
+        </Box>
+        <Flex justify="center" width="100%">
+          <HStack
+            spacing={4}
+            direction={{ base: "column", md: "row" }}
+            flexDirection={{ base: "column", md: "row" }}
+            align="center"
+            width={{ base: "100%", md: "auto" }}
+          >
+            <Button
+              onClick={handleUploadAvatar}
+              leftIcon={<FaFileUpload />}
+              colorScheme="teal"
+              variant="solid"
+              size="md"
+              isDisabled={isUploading || isDeletingAvatar || !newAvatar}
+              isLoading={isUploading}
+              loadingText="Uploading"
+              bg="teal"
+              _hover={{ bg: "teal.500" }}
+              borderRadius="md"
+              px={6}
+              py={2}
+              width={{ base: "100%", md: "auto" }}
+            >
+              Upload Picture
+            </Button>
+            {user?.profileImage && (
+              <Button
+                leftIcon={<DeleteIcon />}
+                colorScheme="red"
+                variant="outline"
+                size="md"
+                onClick={handleDeleteAvatar}
+                isDisabled={isUploading || isDeletingAvatar}
+                isLoading={isDeletingAvatar}
+                loadingText="Deleting"
+                borderRadius="md"
+                px={6}
+                py={2}
+                width={{ base: "100%", md: "auto" }}
               >
-                Delete
-              </MenuItem>
-            </MenuList>
-          </Menu>
-        )}
-        <Flex align="center" mb={6}>
-          <Avatar size="md" src={post.user?.profileImage} mr={3} />
-          <Box>
-            <Link
-              as={RouterLink}
-              to={`/profile/${post.user?.id}`}
-              fontWeight="bold"
-              color="teal.500"
-              _hover={{ textDecoration: 'underline' }}
-            >
-              {post.user?.firstName} {post.user?.lastName}
-            </Link>
-            <Text fontSize="sm" color="gray.500">
-              {format(new Date(post.createdAt), 'hh:mm a')} - {dayjs(post.createdAt).format('YYYY-MM-DD')}
-            </Text>
-          </Box>
+                Delete Picture
+              </Button>
+            )}
+          </HStack>
         </Flex>
-        <Heading
-          size="lg"
-          mb={4}
-          as={RouterLink}
-          to={`/posts/${post.id}`}
-          color="teal.500"
-          _hover={{ textDecoration: 'underline' }}
-        >
-          {post.title}
-        </Heading>
-        {post.introduction && (
-          <Box mb={6}>
-            <Text fontWeight="semibold" mb={2}>
-              Introduction
-            </Text>
-            <Text color={textColor}>{post.introduction}</Text>
-          </Box>
-        )}
-        {post.content && (
-          <Box mb={6}>
-            <Text fontWeight="semibold" mb={2}>
-              Content
-            </Text>
-            <Text color={textColor} whiteSpace="pre-wrap">
-              {post.content}
-            </Text>
-          </Box>
-        )}
-        {post.objectives_learn && (
-          <Box mb={6}>
-            <Text fontWeight="semibold" mb={2}>
-              Learning Objectives
-            </Text>
-            <Box
-              maxHeight={isLongList ? '200px' : 'auto'}
-              overflowY={isLongList ? 'auto' : 'visible'}
-              css={{
-                '&::-webkit-scrollbar': { width: '8px' }
-              }}
-            >
-              <UnorderedList color={textColor} spacing={2}>
-                {objectivesList.map((item, index) => (
-                  <ListItem key={index}>{item}</ListItem>
-                ))}
-              </UnorderedList>
-            </Box>
-          </Box>
-        )}
-        {post.use_cases && (
-          <Box mb={6}>
-            <Text fontWeight="semibold" mb={2}>
-              Use Cases
-            </Text>
-            <UnorderedList color={textColor} spacing={2}>
-              {stringToList(post.use_cases).map((item, index) => (
-                <ListItem key={index}>{item}</ListItem>
-              ))}
-            </UnorderedList>
-          </Box>
-        )}
-        {post.additional_tips && (
-          <Box mb={6}>
-            <Text fontWeight="semibold" mb={2}>
-              Additional Tips
-            </Text>
-            <UnorderedList color={textColor} spacing={2}>
-              {stringToList(post.additional_tips).map((item, index) => (
-                <ListItem key={index}>{item}</ListItem>
-              ))}
-            </UnorderedList>
-          </Box>
-        )}
-        {post.resources && (
-          <Box mb={6}>
-            <Text fontWeight="semibold" mb={2}>
-              Resources
-            </Text>
-            <UnorderedList color={textColor} spacing={2}>
-              {renderResources(post.resources)}
-            </UnorderedList>
-          </Box>
-        )}
-        {post.user && (
-          <Flex gap={2} align="center">
-            <Button
-              colorScheme="green"
-              size="sm"
-              flex="1"
-              opacity={userReactions[post.id] && userReactions[post.id] !== 'benefited' ? 0.5 : 1}
-              onClick={() => handleReaction(post.id, 'benefited')}
-            >
-              Benefited
-            </Button>
-            <Button
-              colorScheme="red"
-              size="sm"
-              variant="outline"
-              flex="1"
-              opacity={userReactions[post.id] && userReactions[post.id] !== 'not_benefited' ? 0.5 : 1}
-              onClick={() => handleReaction(post.id, 'not_benefited')}
-            >
-              Not Benefited
-            </Button>
-            <IconButton
-              icon={<StarIcon />}
-              color={isFavorite ? 'yellow.400' : 'gray.400'}
-              variant={isFavorite ? 'solid' : 'outline'}
-              size="sm"
-              aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-              onClick={toggleFavorite}
-            />
-          </Flex>
-        )}
-      </Box>
+
+      </VStack>
+
+      {/* Form Fields */}
+      <VStack spacing={6} align="stretch">
+        <FormControl>
+          <FormLabel>First Name</FormLabel>
+          <Input
+            value={newData.firstName}
+            onChange={(e) => setNewData({ ...newData, firstName: e.target.value })}
+            bg={bg}
+            borderRadius="md"
+            isDisabled={isUpdating}
+            _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px teal.500' }}
+          />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Last Name</FormLabel>
+          <Input
+            value={newData.lastName}
+            onChange={(e) => setNewData({ ...newData, lastName: e.target.value })}
+            bg={bg}
+            borderRadius="md"
+            isDisabled={isUpdating}
+            _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px teal.500' }}
+          />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Bio</FormLabel>
+          <Input
+            value={newData.bio}
+            onChange={(e) => setNewData({ ...newData, bio: e.target.value })}
+            bg={bg}
+            borderRadius="md"
+            isDisabled={isUpdating}
+            _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px teal.500' }}
+          />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Age</FormLabel>
+          <Input
+            type="number"
+            value={newData.age}
+            onChange={(e) => setNewData({ ...newData, age: e.target.value })}
+            bg={bg}
+            borderRadius="md"
+            isDisabled={isUpdating}
+            _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px teal.500' }}
+          />
+        </FormControl>
+        <Flex justify="space-between" mt={6}>
+          <Button
+            colorScheme="teal"
+            onClick={handleSave}
+            isLoading={isUpdating}
+            loadingText="Saving"
+            bg="teal"
+            _hover={{ bg: "teal.500" }}
+            borderRadius="md"
+            px={6}
+            py={2}
+          >
+            Save
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            isDisabled={isUpdating}
+            borderRadius="md"
+            px={6}
+            py={2}
+          >
+            Cancel
+          </Button>
+        </Flex>
+      </VStack>
     </Container>
   );
-};
+}
 
-export default PostDetails;
+export default EditProfile;
