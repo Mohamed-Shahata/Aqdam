@@ -1,5 +1,5 @@
 import { Avatar, Box, Button, Container, Flex, FormControl, FormLabel, Heading, HStack, IconButton, Input, useColorModeValue, useToast, VStack } from '@chakra-ui/react';
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
@@ -8,7 +8,6 @@ import { DeleteIcon } from '@chakra-ui/icons';
 
 function EditProfile() {
   const { user, updateUser } = useContext(AuthContext);
-
 
   const [newData, setNewData] = useState({
     firstName: '',
@@ -20,12 +19,10 @@ function EditProfile() {
   const [newAvatar, setNewAvatar] = useState(user.profileImage);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isDeletingAvatar, setIsDeleteAvatar] = useState(false);
+  const [isDeletingAvatar, setIsDeletingAvatar] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
   const bg = useColorModeValue('white', 'gray.800');
-  // const borderColor = useColorModeValue('gray.200', 'gray.600');
-
 
   useEffect(() => {
     if (user) {
@@ -33,55 +30,93 @@ function EditProfile() {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         bio: user.bio || '',
-        age: user.age || '',
+        age: user.age || ''
       });
+      setNewAvatar(user.profileImage || null);
     }
   }, [user]);
-
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type and size
+      const validTypes = ['image/jpeg', 'image/png'];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: 'Error',
+          description: 'Please upload a JPEG or PNG image.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true
+        });
+        return;
+      }
+      if (file.size > maxSize) {
+        toast({
+          title: 'Error',
+          description: 'Image size must be less than 5MB.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true
+        });
+        return;
+      }
       setNewAvatar(file);
     }
   };
 
   const handleUploadAvatar = async () => {
-    if (!newAvatar) {
+    if (!newAvatar || !(newAvatar instanceof File)) {
       toast({
-        title: "Error",
-        description: "Select your image first",
-        status: "error",
+        title: 'Error',
+        description: 'Please select an image to upload.',
+        status: 'error',
         duration: 5000,
         isClosable: true
       });
       return;
     }
 
-    setIsUploading(true)
+    setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append('user-image', newAvatar);
-      const response = await api.post("/users/images/upload-image", formData);
+      // Debug: Log FormData entries
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value);
+      }
+
+      const response = await api.post('/users/images/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
 
       const newImageUrl = response.data.imageUrl;
+      if (!newImageUrl) {
+        throw new Error('Image URL not returned from server');
+      }
 
       setNewAvatar(newImageUrl);
       updateUser({ ...user, profileImage: newImageUrl });
       toast({
-        title: "Updated profile successful 🎉",
-        description: "Profile image updated successful",
-        status: "success",
+        title: 'Success',
+        description: 'Profile image updated successfully.',
+        status: 'success',
         duration: 5000,
         isClosable: true
       });
-      window.location.reload();
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Something went wrong"
+      console.error('Upload error:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to upload image. Please try again.';
       toast({
-        title: "Error",
+        title: 'Error',
         description: errorMessage,
-        status: "error",
+        status: 'error',
         duration: 5000,
         isClosable: true
       });
@@ -91,71 +126,73 @@ function EditProfile() {
   };
 
   const handleDeleteAvatar = async () => {
-    setIsDeleteAvatar(true);
+    setIsDeletingAvatar(true);
     try {
-      await api.delete("/users/images/delete-image");
-      updateUser(({ profileImage: '' }));
+      await api.delete('/users/images/delete-image');
+      updateUser({ ...user, profileImage: '' });
       setNewAvatar(null);
-
       toast({
-        title: "Deleted successfuly 🎉",
-        description: "Deleted profile image successful",
-        status: "success",
+        title: 'Success',
+        description: 'Profile image deleted successfully.',
+        status: 'success',
         duration: 5000,
         isClosable: true
       });
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Something went wrong"
+      const errorMessage =
+        error.response?.data?.message || 'Failed to delete image.';
       toast({
-        title: "Error",
+        title: 'Error',
         description: errorMessage,
-        status: "error",
+        status: 'error',
         duration: 5000,
         isClosable: true
       });
     } finally {
-      setIsDeleteAvatar(false);
+      setIsDeletingAvatar(false);
     }
   };
-
 
   const handleSave = async () => {
     setIsUpdating(true);
     try {
       const updateData = {};
-      if (newData.firstName !== user.firstName) updateData.firstName = newData.firstName
-      if (newData.lastName !== user.lastName) updateData.lastName = newData.lastName
-      if (newData.bio !== user.bio) updateData.bio = newData.bio
-      if (newData.age !== user.age) updateData.age = Number(newData.age)
+      if (newData.firstName !== user.firstName)
+        updateData.firstName = newData.firstName;
+      if (newData.lastName !== user.lastName)
+        updateData.lastName = newData.lastName;
+      if (newData.bio !== user.bio) updateData.bio = newData.bio;
+      if (newData.age !== user.age) updateData.age = Number(newData.age);
 
       if (Object.keys(updateData).length === 0) {
         toast({
-          title: "Not updated anything",
-          description: "not updated",
-          status: "info",
+          title: 'No changes',
+          description: 'No profile changes to save.',
+          status: 'info',
           duration: 5000,
           isClosable: true
         });
-        navigate("/profile");
+        navigate('/profile');
         return;
       }
 
-      await api.patch("/users", updateData);
+      await api.patch('/users', updateData);
       updateUser(updateData);
       toast({
-        title: "Updated successful 🎉",
-        description: "Profile updated successful",
-        status: "success",
+        title: 'Success',
+        description: 'Profile updated successfully.',
+        status: 'success',
         duration: 5000,
         isClosable: true
       });
-      navigate("/profile");
+      navigate('/profile');
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Something went wrong"
+      const errorMessage =
+        error.response?.data?.message || 'Failed to update profile.';
       toast({
-        title: "Error",
+        title: 'Error',
         description: errorMessage,
-        status: "error",
+        status: 'error',
         duration: 5000,
         isClosable: true
       });
@@ -165,8 +202,9 @@ function EditProfile() {
   };
 
   const handleCancel = () => {
-    navigate("/profile")
-  }
+    navigate('/profile');
+  };
+
   return (
     <Container maxW="container.md" py={8}>
       <Heading mb={8}>Edit Profile</Heading>
@@ -176,13 +214,17 @@ function EditProfile() {
         <Box position="relative">
           <Avatar
             size="2xl"
-            src={newAvatar instanceof File ? URL.createObjectURL(newAvatar) : user?.profileImage}
+            src={
+              newAvatar instanceof File
+                ? URL.createObjectURL(newAvatar)
+                : newAvatar || user?.profileImage
+            }
             borderWidth={2}
             borderColor={useColorModeValue('gray.200', 'gray.600')}
           />
           <Input
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png"
             onChange={handleAvatarChange}
             display="none"
             id="avatar-upload"
@@ -200,17 +242,17 @@ function EditProfile() {
             bottom={0}
             right={0}
             boxShadow="md"
-            _hover={{ bg: "teal.500" }}
+            _hover={{ bg: 'teal.500' }}
             cursor="pointer"
           />
         </Box>
         <Flex justify="center" width="100%">
           <HStack
             spacing={4}
-            direction={{ base: "column", md: "row" }}
-            flexDirection={{ base: "column", md: "row" }}
+            direction={{ base: 'column', md: 'row' }}
+            flexDirection={{ base: 'column', md: 'row' }}
             align="center"
-            width={{ base: "100%", md: "auto" }}
+            width={{ base: '100%', md: 'auto' }}
           >
             <Button
               onClick={handleUploadAvatar}
@@ -222,11 +264,11 @@ function EditProfile() {
               isLoading={isUploading}
               loadingText="Uploading"
               bg="teal"
-              _hover={{ bg: "teal.500" }}
+              _hover={{ bg: 'teal.500' }}
               borderRadius="md"
               px={6}
               py={2}
-              width={{ base: "100%", md: "auto" }}
+              width={{ base: '100%', md: 'auto' }}
             >
               Upload Picture
             </Button>
@@ -243,14 +285,13 @@ function EditProfile() {
                 borderRadius="md"
                 px={6}
                 py={2}
-                width={{ base: "100%", md: "auto" }}
+                width={{ base: '100%', md: 'auto' }}
               >
                 Delete Picture
               </Button>
             )}
           </HStack>
         </Flex>
-
       </VStack>
 
       {/* Form Fields */}
@@ -259,7 +300,9 @@ function EditProfile() {
           <FormLabel>First Name</FormLabel>
           <Input
             value={newData.firstName}
-            onChange={(e) => setNewData({ ...newData, firstName: e.target.value })}
+            onChange={(e) =>
+              setNewData({ ...newData, firstName: e.target.value })
+            }
             bg={bg}
             borderRadius="md"
             isDisabled={isUpdating}
@@ -270,7 +313,9 @@ function EditProfile() {
           <FormLabel>Last Name</FormLabel>
           <Input
             value={newData.lastName}
-            onChange={(e) => setNewData({ ...newData, lastName: e.target.value })}
+            onChange={(e) =>
+              setNewData({ ...newData, lastName: e.target.value })
+            }
             bg={bg}
             borderRadius="md"
             isDisabled={isUpdating}
@@ -307,7 +352,7 @@ function EditProfile() {
             isLoading={isUpdating}
             loadingText="Saving"
             bg="teal"
-            _hover={{ bg: "teal.500" }}
+            _hover={{ bg: 'teal.500' }}
             borderRadius="md"
             px={6}
             py={2}
