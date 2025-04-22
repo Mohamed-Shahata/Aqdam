@@ -82,16 +82,8 @@ function EditProfile() {
     try {
       const formData = new FormData();
       formData.append('user-image', newAvatar);
-      // Debug: Log FormData entries
-      for (let [key, value] of formData.entries()) {
-        console.log(`${key}:`, value);
-      }
 
-      const response = await api.post('/users/images/upload-image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      const response = await api.post('/users/images/upload-image', formData);
 
       const newImageUrl = response.data.imageUrl;
       if (!newImageUrl) {
