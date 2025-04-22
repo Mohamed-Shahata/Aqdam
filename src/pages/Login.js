@@ -63,7 +63,7 @@ function Login() {
       bg={bg}
       borderColor={borderColor}
     >
-      <Heading mb={6} textAlign="center">Login</Heading>
+      <Heading mb={6} textAlign="center">AQ</Heading>
 
       <form onSubmit={handleSubmit}>
         <FormControl mb={4}>
