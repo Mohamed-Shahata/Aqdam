@@ -83,7 +83,9 @@ function EditProfile() {
       const formData = new FormData();
       formData.append('user-image', newAvatar);
 
-      const response = await api.post('/users/images/upload-image', formData);
+      const response = await api.post('/users/images/upload-image', formData,
+        { withCredentials: true }
+      );
 
       const newImageUrl = response.data.imageUrl;
       if (!newImageUrl) {
