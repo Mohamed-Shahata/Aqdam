@@ -35,7 +35,7 @@ const Favorites = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const textColor = useColorModeValue('gray.600', 'gray.300');
 
-  // Fetch favorite jobs with caching
+  // Fetch favorite jobs
   const { data: favorites = [], isLoading } = useQuery({
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
@@ -43,8 +43,6 @@ const Favorites = () => {
       return Array.isArray(response.data) ? response.data : [];
     },
     enabled: !!user, // Only fetch if user is logged in
-    staleTime: 5 * 60 * 1000, // Cache data for 5 minutes
-    cacheTime: 10 * 60 * 1000, // Keep data in cache for 10 minutes
     onError: (error) => {
       toast({
         title: 'Error',
@@ -62,11 +60,9 @@ const Favorites = () => {
       await api.delete(`/jobs/favorites/${jobId}`);
     },
     onSuccess: (_, jobId) => {
-      // Update the cache manually
-      queryClient.setQueryData(['favorites', user?.id], (old) => {
-        if (!old) return [];
-        return old.filter((job) => Number(job.id) !== Number(jobId));
-      });
+      queryClient.setQueryData(['favorites', user?.id], (old) =>
+        old.filter((job) => job.id !== jobId)
+      );
       toast({
         title: 'Success',
         description: 'Removed from favorites.',
@@ -127,12 +123,12 @@ const Favorites = () => {
         My Favorite Jobs
       </Heading>
       {favorites.length === 0 ? (
-        <Text textAlign="center">No favorite jobs yet.</Text>
+        <Text>No favorite jobs yet.</Text>
       ) : (
         <VStack spacing={6} align="stretch">
           {favorites.map((job) => (
             <Box
-              key={`favorite-job-${job.id}`}
+              key={job.id}
               p={8}
               minHeight="240px"
               borderWidth={1}
@@ -163,18 +159,16 @@ const Favorites = () => {
 
               {/* User Info */}
               <Flex align="center" mb={6}>
-                <Avatar size="md" src={job.user?.profileImage || ''} mr={3} />
-                <Box>
-                  <Link
-                    as={RouterLink}
-                    to={`/profile/${job.user?.id || ''}`}
-                    fontWeight="bold"
-                    color="teal.500"
-                    _hover={{ textDecoration: 'underline' }}
-                  >
-                    {job.user?.firstName || 'Unknown'} {job.user?.lastName || ''}
-                  </Link>
-                </Box>
+                <Avatar size="md" src={job.user?.profileImage} mr={3} />
+                <Link
+                  as={RouterLink}
+                  to={`/profile/${job.user?.id}`}
+                  fontWeight="bold"
+                  color="teal.500"
+                  _hover={{ textDecoration: 'underline' }}
+                >
+                  {job.user?.firstName} {job.user?.lastName}
+                </Link>
               </Flex>
 
               {/* Job Details */}
@@ -186,7 +180,7 @@ const Favorites = () => {
                 color="teal.500"
                 _hover={{ textDecoration: 'underline' }}
               >
-                {job.title || 'Untitled Job'}
+                {job.title}
               </Heading>
 
               {job.short_intro && (
@@ -219,7 +213,7 @@ const Favorites = () => {
               {job.email_applay && (
                 <Button
                   as="a"
-                  href={`mailto:${job.email_applay}?subject=Job Application - ${encodeURIComponent(job.title || 'Untitled Job')}`}
+                  href={`mailto:${job.email_applay}?subject=Job Application - ${encodeURIComponent(job.title)}`}
                   colorScheme="teal"
                   size="lg"
                   width={{ base: 'full', md: 'auto' }}
@@ -232,7 +226,7 @@ const Favorites = () => {
               )}
 
               <Text fontSize="sm" color="gray.500">
-                Posted on: {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Unknown'}
+                Posted on: {new Date(job.createdAt).toLocaleDateString()}
               </Text>
             </Box>
           ))}
