@@ -542,7 +542,7 @@ const Profile = () => {
   if (profileError || !profileUser) {
     return (
       <Center h="100vh">
-        <Text color="red.500">Unable to load profile. Please try again later.</Text>
+        <Spinner size="xl" />
       </Center>
     );
   }
