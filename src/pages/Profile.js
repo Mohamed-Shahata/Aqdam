@@ -34,6 +34,7 @@ import {
   Menu,
   ModalHeader,
   Icon,
+  HStack,
 } from '@chakra-ui/react';
 import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../AuthContext';
@@ -48,6 +49,7 @@ import { IoSparkles } from 'react-icons/io5';
 import { FaGem, FaCrown } from 'react-icons/fa';
 import { MdThumbDown, MdThumbUp, MdWork } from 'react-icons/md';
 import InfiniteScroll from 'react-infinite-scroll-component';
+import { FaFacebook, FaLinkedin, FaGithub } from 'react-icons/fa';
 import maleProfile from "../pages/gender/male.jpg";
 import femaleProfile from "../pages/gender/female.jpg";
 
@@ -494,6 +496,19 @@ const Profile = () => {
     reactionMutation.mutate({ postId, type });
   };
 
+  const getDisplayText = (url) => {
+    if (!url) return '';
+    try {
+      const parsedUrl = new URL(url);
+      const path = parsedUrl.pathname;
+      // Extract the username or profile part (e.g., /johndoe -> johndoe)
+      const username = path.split('/').filter(Boolean).pop() || parsedUrl.hostname;
+      return username;
+    } catch {
+      return url; // Fallback to full URL if parsing fails
+    }
+  };
+
   const renderResources = (resources) => {
     const items = stringToList(resources);
     const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -672,6 +687,34 @@ const Profile = () => {
       </Flex>
       <VStack align="center" spacing={2} mb={6}>
         <Text>{profileUser?.bio || ''}</Text>
+      </VStack>
+      <VStack align="center" spacing={4} mb={6}>
+        <Text>{profileUser?.bio || ''}</Text>
+        {profileUser?.occupation && (
+          <Text fontWeight="semibold" color="teal.500">
+            {profileUser.occupation}
+          </Text>
+        )}
+        <HStack spacing={6} wrap="wrap" justify="center">
+          {profileUser?.facebookUrl && (
+            <Flex align="center" as="a" href={profileUser.facebookUrl} target="_blank" rel="noopener noreferrer" color="facebook.500" _hover={{ textDecoration: 'underline' }}>
+              <FaFacebook size={20} />
+              <Text ml={2} fontSize="sm">{getDisplayText(profileUser.facebookUrl)}</Text>
+            </Flex>
+          )}
+          {profileUser?.linkedinUrl && (
+            <Flex align="center" as="a" href={profileUser.linkedinUrl} target="_blank" rel="noopener noreferrer" color="linkedin.500" _hover={{ textDecoration: 'underline' }}>
+              <FaLinkedin size={20} />
+              <Text ml={2} fontSize="sm">{getDisplayText(profileUser.linkedinUrl)}</Text>
+            </Flex>
+          )}
+          {profileUser?.githubUrl && (
+            <Flex align="center" as="a" href={profileUser.githubUrl} target="_blank" rel="noopener noreferrer" color="gray.500" _hover={{ textDecoration: 'underline' }}>
+              <FaGithub size={20} />
+              <Text ml={2} fontSize="sm">{getDisplayText(profileUser.githubUrl)}</Text>
+            </Flex>
+          )}
+        </HStack>
       </VStack>
       <Divider mt={6} />
       {isOwnerProfile && (
