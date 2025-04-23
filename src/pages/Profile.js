@@ -684,7 +684,7 @@ const Profile = () => {
           )}
         </Box>
       </Flex>
-      <VStack align="center" spacing={4} mb={6}>
+      <VStack align="start" spacing={4} mb={6}>
         <Text>{profileUser?.bio || ''}</Text>
         {profileUser?.occupation && (
           <Text fontWeight="semibold">
