@@ -48,6 +48,8 @@ import { IoSparkles } from 'react-icons/io5';
 import { FaGem, FaCrown } from 'react-icons/fa';
 import { MdThumbDown, MdThumbUp, MdWork } from 'react-icons/md';
 import InfiniteScroll from 'react-infinite-scroll-component';
+import maleProfile from "../pages/gender/male.jpg";
+import femaleProfile from "../pages/gender/female.jpg";
 
 const Profile = () => {
   const { user } = useContext(AuthContext);
@@ -594,7 +596,7 @@ const Profile = () => {
       <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'start' }} mb={6}>
         <Avatar
           size="xl"
-          src={profileUser?.profileImage || profileError?.gender === 'male' ? "/gender/male.jpg" : "/gender/female.jpg"}
+          src={profileUser?.profileImage || profileError?.gender === 'male' ? maleProfile : femaleProfile}
           mb={{ base: 4, md: 0 }}
           cursor={profileUser?.profileImage ? 'pointer' : 'default'}
           onClick={profileUser?.profileImage ? onImageOpen : undefined}
