@@ -130,7 +130,7 @@ const Profile = () => {
     queryFn: async () => {
       const response = await api.get(`/jobs/user/${Number(profileUser.id)}?page=${jobsPage}&limit=${limit}`);
       console.log('Jobs API response:', response.data);
-      return response.data;
+      return response.data.data;
     },
     enabled: !!profileUser?.id,
     staleTime: 5 * 60 * 1000,
@@ -153,7 +153,7 @@ const Profile = () => {
     queryFn: async () => {
       const response = await api.get(`/posts/user/${Number(profileUser.id)}?page=${postsPage}&limit=${limit}`);
       console.log('Posts API response:', response.data);
-      return response.data;
+      return response.data.data;
     },
     enabled: !!profileUser?.id,
     staleTime: 5 * 60 * 1000,
