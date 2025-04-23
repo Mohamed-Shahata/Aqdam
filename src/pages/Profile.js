@@ -77,7 +77,6 @@ const Profile = () => {
     queryFn: async () => {
       if (id) {
         const response = await api.get(`/users/${id}`);
-        console.log('Profile user response:', response.data);
         return response.data;
       }
       return user;
@@ -102,7 +101,6 @@ const Profile = () => {
     queryKey: ['followers', profileUser?.id],
     queryFn: async () => {
       const response = await api.post(`/users/${Number(profileUser.id)}/followers`);
-      console.log('Followers response:', response.data);
       return response.data;
     },
     enabled: !!profileUser?.id,
@@ -114,7 +112,6 @@ const Profile = () => {
     queryKey: ['following', profileUser?.id],
     queryFn: async () => {
       const response = await api.post(`/users/${Number(profileUser.id)}/following`);
-      console.log('Following response:', response.data);
       return response.data;
     },
     enabled: !!profileUser?.id,
@@ -129,7 +126,6 @@ const Profile = () => {
     queryKey: ['jobs', profileUser?.id, jobsPage],
     queryFn: async () => {
       const response = await api.get(`/jobs/user/${Number(profileUser.id)}?page=${jobsPage}&limit=${limit}`);
-      console.log('Jobs API response:', response.data);
       return response.data; // Return the full response object
     },
     enabled: !!profileUser?.id,
@@ -152,7 +148,6 @@ const Profile = () => {
     queryKey: ['posts', profileUser?.id, postsPage],
     queryFn: async () => {
       const response = await api.get(`/posts/user/${Number(profileUser.id)}`);
-      console.log('Posts API response:', response.data);
       return response.data; // Return the full response object
     },
     enabled: !!profileUser?.id,
@@ -172,12 +167,10 @@ const Profile = () => {
 
   // Update jobs when new data is fetched
   useEffect(() => {
-    console.log('Jobs response:', jobsResponse);
     if (jobsResponse?.data?.length > 0) {
       setJobs((prev) => {
         const newJobs = [...prev, ...jobsResponse.data];
         const uniqueJobs = Array.from(new Map(newJobs.map((job) => [job.id, job])).values());
-        console.log('Updated jobs:', uniqueJobs);
         return uniqueJobs;
       });
       setHasMoreJobs(jobsResponse.currentPage < jobsResponse.totalPages);
@@ -188,12 +181,10 @@ const Profile = () => {
 
   // Update posts when new data is fetched
   useEffect(() => {
-    console.log('Posts response:', postsResponse);
     if (postsResponse?.data?.length > 0) {
       setPosts((prev) => {
         const newPosts = [...prev, ...postsResponse.data];
         const uniquePosts = Array.from(new Map(newPosts.map((post) => [post.id, post])).values());
-        console.log('Updated posts:', uniquePosts);
         return uniquePosts;
       });
       setHasMorePosts(postsResponse.currentPage < postsResponse.totalPages);
@@ -207,7 +198,6 @@ const Profile = () => {
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
       const response = await api.post('/jobs/favorites/me');
-      console.log('Favorites response:', response.data);
       return response.data.map((fav) => Number(fav.id));
     },
     enabled: !!user?.id,
@@ -226,7 +216,6 @@ const Profile = () => {
     queryKey: ['userReactions', user?.id],
     queryFn: async () => {
       const response = await api.get('/posts/reactions/me');
-      console.log('User reactions response:', response.data);
       return Array.isArray(response.data)
         ? response.data.reduce((acc, reaction) => {
           acc[reaction.postId] = reaction.type;
@@ -258,7 +247,6 @@ const Profile = () => {
           }
         })
       );
-      console.log('Reaction counts:', reactionCountsData);
       return reactionCountsData;
     },
     enabled: !!posts.length,
@@ -539,14 +527,12 @@ const Profile = () => {
   };
 
   const loadMoreJobs = () => {
-    console.log('Loading more jobs, current page:', jobsPage);
     if (hasMoreJobs && !isJobsLoading) {
       setJobsPage((prev) => prev + 1);
     }
   };
 
   const loadMorePosts = () => {
-    console.log('Loading more posts, current page:', postsPage);
     if (hasMorePosts && !isPostsLoading) {
       setPostsPage((prev) => prev + 1);
     }
@@ -581,7 +567,6 @@ const Profile = () => {
 
   return (
     <Container maxW="container.md" py={8}>
-      <Heading>Hello world</Heading>
       {isOwnerProfile && (
         <Flex justifyContent="space-between" mb={4}>
           <Box />
