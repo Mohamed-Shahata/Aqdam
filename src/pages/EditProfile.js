@@ -7,6 +7,8 @@ import { FaCamera, FaFileUpload } from 'react-icons/fa';
 import { DeleteIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import Cookies from "js-cookie"
+import maleProfile from "../pages/gender/male.jpg";
+import femaleProfile from "../pages/gender/female.jpg";
 
 function EditProfile() {
   const { user, updateUser } = useContext(AuthContext);
@@ -235,6 +237,11 @@ function EditProfile() {
               newAvatar instanceof File
                 ? URL.createObjectURL(newAvatar)
                 : newAvatar || user?.profileImage
+                  ? user.profileImage
+                  : user?.gender === 'male'
+                    ? maleProfile
+                    : femaleProfile
+
             }
             borderWidth={2}
             borderColor={useColorModeValue('gray.200', 'gray.600')}
