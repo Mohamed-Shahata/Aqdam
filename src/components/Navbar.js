@@ -129,7 +129,7 @@ function Navbar() {
                   leftIcon={<Icon as={FaUsers} />}
                   mx={1}
                 >
-                  P
+                  People
                 </Button>
               )}
               {isAuthenticated ? (
@@ -142,7 +142,7 @@ function Navbar() {
                     leftIcon={<Icon as={FaHome} />}
                     mx={1}
                   >
-                    People
+                    Home
                   </Button>
                   <Button
                     as={RouterLink}
