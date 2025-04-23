@@ -84,7 +84,7 @@ function EditProfile() {
     try {
       const formData = new FormData();
       formData.append('user-image', newAvatar);
-
+      console.log(formData)
       const token = Cookies.get("token");
       const response = await axios.post("https://aqdambackend-production-0985.up.railway.app/api/users/images/upload-image", formData, {
         withCredentials: true,
