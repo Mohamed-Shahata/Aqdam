@@ -224,8 +224,38 @@ function Navbar() {
           <DrawerHeader>Menu</DrawerHeader>
           <DrawerBody>
             <VStack spacing={4} align="stretch">
-              {isAuthenticated && (
+              {isAuthenticated ? (
                 <>
+                  <Button
+                    as={RouterLink}
+                    to="/home"
+                    colorScheme="teal"
+                    variant="ghost"
+                    leftIcon={<Icon as={FaHome} />}
+                    onClick={onDrawerClose}
+                  >
+                    Home
+                  </Button>
+                  <Button
+                    as={RouterLink}
+                    to="/profile"
+                    colorScheme="teal"
+                    variant="ghost"
+                    leftIcon={<Icon as={FaUser} />}
+                    onClick={onDrawerClose}
+                  >
+                    Profile
+                  </Button>
+                  <Button
+                    as={RouterLink}
+                    to="/users"
+                    colorScheme="teal"
+                    variant="ghost"
+                    leftIcon={<Icon as={FaUsers} />}
+                    onClick={onDrawerClose}
+                  >
+                    People
+                  </Button>
 
                   <Button
                     as={RouterLink}
@@ -256,40 +286,6 @@ function Navbar() {
                         {notifications.filter((n) => !n.isRead).length}
                       </Box>
                     )}
-                  </Button>
-                </>
-              )}
-              {isAuthenticated ? (
-                <>
-                  <Button
-                    as={RouterLink}
-                    to="/home"
-                    colorScheme="teal"
-                    variant="ghost"
-                    leftIcon={<Icon as={FaHome} />}
-                    onClick={onDrawerClose}
-                  >
-                    Home
-                  </Button>
-                  <Button
-                    as={RouterLink}
-                    to="/users"
-                    colorScheme="teal"
-                    variant="ghost"
-                    leftIcon={<Icon as={FaUsers} />}
-                    onClick={onDrawerClose}
-                  >
-                    People
-                  </Button>
-                  <Button
-                    as={RouterLink}
-                    to="/profile"
-                    colorScheme="teal"
-                    variant="ghost"
-                    leftIcon={<Icon as={FaUser} />}
-                    onClick={onDrawerClose}
-                  >
-                    Profile
                   </Button>
                   <Button
                     as={RouterLink}
