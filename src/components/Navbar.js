@@ -10,30 +10,24 @@ import {
   Flex,
   Icon,
   IconButton,
-  Input,
-  InputGroup,
-  InputRightElement,
   Link,
   useColorModeValue,
   useDisclosure,
   VStack,
 } from '@chakra-ui/react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
 import { FaHome, FaList, FaSignInAlt, FaUser, FaUserPlus, FaUsers } from 'react-icons/fa';
 import ColorModeToggle from './ColorModeToggle';
-import { BellIcon, SearchIcon, SettingsIcon } from '@chakra-ui/icons';
+import { BellIcon, SettingsIcon } from '@chakra-ui/icons';
 import api from '../api';
 
 function Navbar() {
   const { isAuthenticated } = useContext(AuthContext);
   const bg = useColorModeValue('white', 'gray.800');
   const { isOpen: isDrawerOpen, onOpen: onDrawerOpen, onClose: onDrawerClose } = useDisclosure();
-  const [searchQuery, setSearchQuery] = useState('');
   const [notifications, setNotifications] = useState([]);
   const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const searchBg = useColorModeValue('gray.100', 'gray.700');
-  const navigate = useNavigate();
 
   // Bell color based on unread notifications
   const bellColor = useColorModeValue(
@@ -61,18 +55,6 @@ function Navbar() {
     fetchNotifications();
   }, [isAuthenticated]);
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      navigate(`/search?query=${encodeURIComponent(searchQuery)}`);
-      setSearchQuery('');
-    }
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
 
   return (
     <>
@@ -147,7 +129,7 @@ function Navbar() {
                   leftIcon={<Icon as={FaUsers} />}
                   mx={1}
                 >
-                  Users
+                  P
                 </Button>
               )}
               {isAuthenticated ? (
@@ -160,7 +142,7 @@ function Navbar() {
                     leftIcon={<Icon as={FaHome} />}
                     mx={1}
                   >
-                    Home
+                    People
                   </Button>
                   <Button
                     as={RouterLink}
@@ -244,37 +226,7 @@ function Navbar() {
             <VStack spacing={4} align="stretch">
               {isAuthenticated && (
                 <>
-                  <Button
-                    as={RouterLink}
-                    to="/users"
-                    colorScheme="teal"
-                    variant="ghost"
-                    leftIcon={<Icon as={FaUsers} />}
-                    onClick={onDrawerClose}
-                  >
-                    Users
-                  </Button>
-                  <InputGroup>
-                    <Input
-                      placeholder="Search for people..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      borderRadius="md"
-                      bg={searchBg}
-                      _focus={{ borderColor: 'teal.500' }}
-                    />
-                    <InputRightElement>
-                      <IconButton
-                        aria-label="Search"
-                        icon={<SearchIcon />}
-                        onClick={handleSearch}
-                        variant="ghost"
-                        size="sm"
-                        colorScheme="teal"
-                      />
-                    </InputRightElement>
-                  </InputGroup>
+
                   <Button
                     as={RouterLink}
                     to="/notifications"
@@ -318,6 +270,16 @@ function Navbar() {
                     onClick={onDrawerClose}
                   >
                     Home
+                  </Button>
+                  <Button
+                    as={RouterLink}
+                    to="/users"
+                    colorScheme="teal"
+                    variant="ghost"
+                    leftIcon={<Icon as={FaUsers} />}
+                    onClick={onDrawerClose}
+                  >
+                    People
                   </Button>
                   <Button
                     as={RouterLink}
