@@ -86,7 +86,7 @@ function EditProfile() {
       formData.append('user-image', newAvatar);
 
       const token = Cookies.get("token");
-      const response = await axios.post("https://aqdambackend-production-a9a9.up.railway.app/api/users/images/upload-image", formData, {
+      const response = await axios.post("https://aqdambackend-production-0985.up.railway.app/api/users/images/upload-image", formData, {
         withCredentials: true,
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -130,7 +130,7 @@ function EditProfile() {
     setIsDeletingAvatar(true);
     try {
       const token = Cookies.get("token");
-      await axios.delete("https://aqdambackend-production-a9a9.up.railway.app/api/users/images/delete-image", {
+      await axios.delete("https://aqdambackend-production-0985.up.railway.app/api/users/images/delete-image", {
         withCredentials: true,
         headers: {
           'Authorization': `Bearer ${token}`
