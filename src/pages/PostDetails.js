@@ -28,6 +28,8 @@ import { HamburgerIcon } from '@chakra-ui/icons';
 import dayjs from 'dayjs';
 import { format } from 'date-fns';
 import { MdThumbDown, MdThumbUp } from 'react-icons/md';
+import maleProfile from "../pages/gender/male.jpg";
+import femaleProfile from "../pages/gender/female.jpg";
 
 const PostDetails = () => {
   const { id } = useParams();
@@ -281,7 +283,7 @@ const PostDetails = () => {
           </Menu>
         )}
         <Flex align="center" mb={6}>
-          <Avatar size="md" src={post.user?.profileImage} mr={3} />
+          <Avatar size="md" src={post.user?.profileImage || post.user?.gender === 'male' ? maleProfile : femaleProfile} mr={3} />
           <Box>
             <Link
               as={RouterLink}

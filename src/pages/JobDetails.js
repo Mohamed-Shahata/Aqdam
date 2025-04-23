@@ -36,6 +36,8 @@ import { AuthContext } from '../AuthContext';
 import dayjs from 'dayjs';
 import { format } from 'date-fns';
 import { FaHeart, FaRegHeart } from 'react-icons/fa';
+import maleProfile from "../pages/gender/male.jpg";
+import femaleProfile from "../pages/gender/female.jpg";
 
 const JobDetails = () => {
   const { id } = useParams();
@@ -282,7 +284,7 @@ const JobDetails = () => {
 
         {/* User Info with Date */}
         <Flex align="center" mb={4}>
-          <Avatar size="md" src={job.user?.profileImage} mr={3} />
+          <Avatar size="md" src={job.user?.profileImage || job.user?.gender === 'male' ? maleProfile : femaleProfile} mr={3} />
           <Box>
             <Link
               as={RouterLink}

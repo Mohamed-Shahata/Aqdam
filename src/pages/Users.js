@@ -24,6 +24,8 @@ import api from '../api';
 import { AuthContext } from '../AuthContext';
 import { FaCrown, FaGem } from 'react-icons/fa';
 import { IoSparkles } from 'react-icons/io5';
+import maleProfile from "../pages/gender/male.jpg";
+import femaleProfile from "../pages/gender/female.jpg";
 
 const Users = () => {
   const { user } = useContext(AuthContext);
@@ -217,7 +219,7 @@ const Users = () => {
               >
                 <Flex align="center">
                   <Link to={`/profile/${userItem.id}`}>
-                    <Avatar size="md" src={userItem.profileImage} mr={3} />
+                    <Avatar size="md" src={userItem?.profileImage || userItem?.gender === 'male' ? maleProfile : femaleProfile} mr={3} />
                   </Link>
                   <Box>
                     <Link to={`/profile/${userItem.id}`}>

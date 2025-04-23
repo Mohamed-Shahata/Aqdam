@@ -40,6 +40,8 @@ import api from '../api';
 import { AuthContext } from '../AuthContext';
 import dayjs from 'dayjs';
 import { format } from 'date-fns';
+import maleProfile from "../pages/gender/male.jpg";
+import femaleProfile from "../pages/gender/female.jpg";
 
 const Home = () => {
   const { user } = useContext(AuthContext);
@@ -499,7 +501,7 @@ const Home = () => {
                     </>
                   )}
                   <Flex align="center" mb={6}>
-                    <Avatar size="md" src={item.user?.profileImage} mr={3} />
+                    <Avatar size="md" src={item.user?.profileImage || item.user?.gender === 'male' ? maleProfile : femaleProfile} mr={3} />
                     <Box>
                       <Link
                         as={RouterLink}
