@@ -696,22 +696,22 @@ const Profile = () => {
           </Text>
         )}
         <HStack spacing={6} wrap="wrap" justify="center">
-          {profileUser?.facebookUrl && (
-            <Flex align="center" as="a" href={profileUser.facebookUrl} target="_blank" rel="noopener noreferrer" color="facebook.500" _hover={{ textDecoration: 'underline' }}>
+          {profileUser?.facebook_url && (
+            <Flex align="center" as="a" href={profileUser.facebook_url} target="_blank" rel="noopener noreferrer" color="facebook.500" _hover={{ textDecoration: 'underline' }}>
               <FaFacebook size={20} />
-              <Text ml={2} fontSize="sm">{getDisplayText(profileUser.facebookUrl)}</Text>
+              <Text ml={2} fontSize="sm">{getDisplayText(profileUser.facebook_url)}</Text>
             </Flex>
           )}
-          {profileUser?.linkedinUrl && (
-            <Flex align="center" as="a" href={profileUser.linkedinUrl} target="_blank" rel="noopener noreferrer" color="linkedin.500" _hover={{ textDecoration: 'underline' }}>
+          {profileUser?.linkedin_url && (
+            <Flex align="center" as="a" href={profileUser.linkedin_url} target="_blank" rel="noopener noreferrer" color="linkedin.500" _hover={{ textDecoration: 'underline' }}>
               <FaLinkedin size={20} />
-              <Text ml={2} fontSize="sm">{getDisplayText(profileUser.linkedinUrl)}</Text>
+              <Text ml={2} fontSize="sm">{getDisplayText(profileUser.linkedin_url)}</Text>
             </Flex>
           )}
-          {profileUser?.githubUrl && (
-            <Flex align="center" as="a" href={profileUser.githubUrl} target="_blank" rel="noopener noreferrer" color="gray.500" _hover={{ textDecoration: 'underline' }}>
+          {profileUser?.github_url && (
+            <Flex align="center" as="a" href={profileUser.github_url} target="_blank" rel="noopener noreferrer" color="gray.500" _hover={{ textDecoration: 'underline' }}>
               <FaGithub size={20} />
-              <Text ml={2} fontSize="sm">{getDisplayText(profileUser.githubUrl)}</Text>
+              <Text ml={2} fontSize="sm">{getDisplayText(profileUser.github_url)}</Text>
             </Flex>
           )}
         </HStack>
