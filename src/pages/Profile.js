@@ -689,11 +689,8 @@ const Profile = () => {
       <VStack align="start" spacing={4} mb={6}>
         <Text>{profileUser?.bio || ''}</Text>
         {profileUser?.bio && (
-  <>
-    <Text>{profileUser.bio}</Text>
-    <Divider borderColor="gray.400" borderWidth="1px" my={2} />
-  </>
-)}
+          <Divider borderColor="gray.400" borderWidth="1px" my={2} />
+        )}
         {profileUser?.occupation && (
           <Text fontWeight="semibold" color="cyan.700">
             {profileUser.occupation}
