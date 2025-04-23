@@ -240,7 +240,7 @@ const Users = () => {
                                   ? 'purple.400'
                                   : 'blue.500'
                             }
-                            boxSize={userItem.point >= 10000 ? 7 : userItem.point >= 1000 ? 6 : 6}
+                            boxSize={userItem.point >= 10000 ? 5 : userItem.point >= 1000 ? 5 : 5}
                             transition="color 0.2s"
                             aria-label={
                               userItem.point >= 10000
