@@ -22,6 +22,8 @@ import { Link } from 'react-router-dom';
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
+import { FaCrown, FaGem } from 'react-icons/fa';
+import { IoSparkles } from 'react-icons/io5';
 
 const Users = () => {
   const { user } = useContext(AuthContext);
@@ -223,27 +225,27 @@ const Users = () => {
                         {userItem.firstName} {userItem.lastName} {userItem?.point >= 100 && (
                           <Icon
                             as={
-                              profileUser.point >= 10000
+                              userItem.point >= 10000
                                 ? FaCrown
-                                : profileUser.point >= 1000
+                                : userItem.point >= 1000
                                   ? FaGem
                                   : IoSparkles
                             }
                             ml={2}
                             mb={-1}
                             color={
-                              profileUser.point >= 10000
+                              userItem.point >= 10000
                                 ? 'yellow.500'
-                                : profileUser.point >= 1000
+                                : userItem.point >= 1000
                                   ? 'purple.400'
                                   : 'blue.500'
                             }
-                            boxSize={profileUser.point >= 10000 ? 7 : profileUser.point >= 1000 ? 6 : 6}
+                            boxSize={userItem.point >= 10000 ? 7 : userItem.point >= 1000 ? 6 : 6}
                             transition="color 0.2s"
                             aria-label={
-                              profileUser.point >= 10000
+                              userItem.point >= 10000
                                 ? 'Elite Badge'
-                                : profileUser.point >= 1000
+                                : userItem.point >= 1000
                                   ? 'Pro Badge'
                                   : 'Verified Badge'
                             }
