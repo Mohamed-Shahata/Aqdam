@@ -18,9 +18,9 @@ function EditProfile() {
     lastName: '',
     bio: '',
     age: '',
-    facebookUrl: '',
-    linkedinUrl: '',
-    githubUrl: '',
+    facebook_url: '',
+    linkedin_url: '',
+    github_url: '',
     occupation: ''
   });
 
@@ -39,9 +39,9 @@ function EditProfile() {
         lastName: user.lastName || '',
         bio: user.bio || '',
         age: user.age || '',
-        facebookUrl: user.facebookUrl || '',
-        linkedinUrl: user.linkedinUrl || '',
-        githubUrl: user.githubUrl || '',
+        facebook_url: user.facebook_url || '',
+        linkedin_url: user.linkedin_url || '',
+        github_url: user.github_url || '',
         occupation: user.occupation || ''
       });
       setNewAvatar(user.profileImage || null);
@@ -178,9 +178,9 @@ function EditProfile() {
         updateData.lastName = newData.lastName;
       if (newData.bio !== user.bio) updateData.bio = newData.bio;
       if (newData.age !== user.age) updateData.age = Number(newData.age);
-      if (newData.facebook_url !== user.facebookUrl) updateData.facebookUrl = newData.facebookUrl;
-      if (newData.linkedin_url !== user.linkedinUrl) updateData.linkedinUrl = newData.linkedinUrl;
-      if (newData.github_url !== user.githubUrl) updateData.githubUrl = newData.githubUrl;
+      if (newData.facebook_url !== user.facebook_url) updateData.facebook_url = newData.facebook_url;
+      if (newData.linkedin_url !== user.linkedin_url) updateData.linkedin_url = newData.linkedin_url;
+      if (newData.github_url !== user.github_url) updateData.github_url = newData.github_url;
       if (newData.occupation !== user.occupation) updateData.occupation = newData.occupation;
 
       if (Object.keys(updateData).length === 0) {
@@ -377,8 +377,8 @@ function EditProfile() {
           <FormLabel>Facebook URL</FormLabel>
           <Input
             type="url"
-            value={newData.facebookUrl}
-            onChange={(e) => setNewData({ ...newData, facebookUrl: e.target.value })}
+            value={newData.facebook_url}
+            onChange={(e) => setNewData({ ...newData, facebook_url: e.target.value })}
             placeholder="https://facebook.com/your-profile"
             bg={bg}
             borderRadius="md"
@@ -390,8 +390,8 @@ function EditProfile() {
           <FormLabel>LinkedIn URL</FormLabel>
           <Input
             type="url"
-            value={newData.linkedinUrl}
-            onChange={(e) => setNewData({ ...newData, linkedinUrl: e.target.value })}
+            value={newData.linkedin_url}
+            onChange={(e) => setNewData({ ...newData, linkedin_url: e.target.value })}
             placeholder="https://linkedin.com/in/your-profile"
             bg={bg}
             borderRadius="md"
@@ -403,8 +403,8 @@ function EditProfile() {
           <FormLabel>GitHub URL</FormLabel>
           <Input
             type="url"
-            value={newData.githubUrl}
-            onChange={(e) => setNewData({ ...newData, githubUrl: e.target.value })}
+            value={newData.github_url}
+            onChange={(e) => setNewData({ ...newData, github_url: e.target.value })}
             placeholder="https://github.com/your-profile"
             bg={bg}
             borderRadius="md"
