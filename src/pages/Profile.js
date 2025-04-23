@@ -72,11 +72,12 @@ const Profile = () => {
   const textColor = useColorModeValue('gray.600', 'gray.300');
 
   // Fetch profile user
-  const { data: profileUser, isLoading: isProfileLoading } = useQuery({
+  const { data: profileUser, isLoading: isProfileLoading, error: profileError } = useQuery({
     queryKey: ['profileUser', id || user?.id],
     queryFn: async () => {
       if (id) {
         const response = await api.get(`/users/${id}`);
+        console.log('Profile user response:', response.data);
         return response.data;
       }
       return user;
@@ -84,6 +85,16 @@ const Profile = () => {
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
+    onError: (error) => {
+      console.error('Profile fetch error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load profile. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
   });
 
   // Fetch followers and following counts
@@ -91,6 +102,7 @@ const Profile = () => {
     queryKey: ['followers', profileUser?.id],
     queryFn: async () => {
       const response = await api.post(`/users/${Number(profileUser.id)}/followers`);
+      console.log('Followers response:', response.data);
       return response.data;
     },
     enabled: !!profileUser?.id,
@@ -102,6 +114,7 @@ const Profile = () => {
     queryKey: ['following', profileUser?.id],
     queryFn: async () => {
       const response = await api.post(`/users/${Number(profileUser.id)}/following`);
+      console.log('Following response:', response.data);
       return response.data;
     },
     enabled: !!profileUser?.id,
@@ -112,36 +125,60 @@ const Profile = () => {
   const isFollowing = followers.some((follower) => Number(follower.id) === Number(user?.id));
 
   // Fetch user's jobs with pagination
-  const { data: jobsData = [], isLoading: isJobsLoading } = useQuery({
+  const { data: jobsData = [], isLoading: isJobsLoading, error: jobsError } = useQuery({
     queryKey: ['jobs', profileUser?.id, jobsPage],
     queryFn: async () => {
       const response = await api.get(`/jobs/user/${Number(profileUser.id)}?page=${jobsPage}&limit=${limit}`);
+      console.log('Jobs API response:', response.data);
       return response.data;
     },
     enabled: !!profileUser?.id,
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
+    onError: (error) => {
+      console.error('Jobs fetch error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load jobs. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
   });
 
   // Fetch user's posts with pagination
-  const { data: postsData = [], isLoading: isPostsLoading } = useQuery({
+  const { data: postsData = [], isLoading: isPostsLoading, error: postsError } = useQuery({
     queryKey: ['posts', profileUser?.id, postsPage],
     queryFn: async () => {
       const response = await api.get(`/posts/user/${Number(profileUser.id)}?page=${postsPage}&limit=${limit}`);
-      console.log("posts", response.data)
+      console.log('Posts API response:', response.data);
       return response.data;
     },
     enabled: !!profileUser?.id,
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
+    onError: (error) => {
+      console.error('Posts fetch error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load posts. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
   });
 
   // Update jobs and posts when new data is fetched
   useEffect(() => {
+    console.log('Jobs data:', jobsData);
     if (jobsData?.length > 0) {
       setJobs((prev) => {
         const newJobs = [...prev, ...jobsData];
-        return Array.from(new Map(newJobs.map((job) => [job.id, job])).values());
+        const uniqueJobs = Array.from(new Map(newJobs.map((job) => [job.id, job])).values());
+        console.log('Updated jobs:', uniqueJobs);
+        return uniqueJobs;
       });
       setHasMoreJobs(jobsData.length === limit);
     } else {
@@ -150,10 +187,13 @@ const Profile = () => {
   }, [jobsData]);
 
   useEffect(() => {
+    console.log('Posts data:', postsData);
     if (postsData?.length > 0) {
       setPosts((prev) => {
         const newPosts = [...prev, ...postsData];
-        return Array.from(new Map(newPosts.map((post) => [post.id, post])).values());
+        const uniquePosts = Array.from(new Map(newPosts.map((post) => [post.id, post])).values());
+        console.log('Updated posts:', uniquePosts);
+        return uniquePosts;
       });
       setHasMorePosts(postsData.length === limit);
     } else {
@@ -166,22 +206,26 @@ const Profile = () => {
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
       const response = await api.post('/jobs/favorites/me');
+      console.log('Favorites response:', response.data);
       return response.data.map((fav) => Number(fav.id));
     },
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
   });
+
   useEffect(() => {
     if (user) {
       refetch();
     }
   }, [user, refetch]);
+
   // Fetch user reactions
   const { data: userReactions = {}, isLoading: isReactionsLoading } = useQuery({
     queryKey: ['userReactions', user?.id],
     queryFn: async () => {
       const response = await api.get('/posts/reactions/me');
+      console.log('User reactions response:', response.data);
       return Array.isArray(response.data)
         ? response.data.reduce((acc, reaction) => {
           acc[reaction.postId] = reaction.type;
@@ -208,10 +252,12 @@ const Profile = () => {
               not_benefited: response.data.not_benefited || 0,
             };
           } catch (error) {
+            console.error(`Error fetching reactions for post ${post.id}:`, error);
             reactionCountsData[post.id] = { benefited: 0, not_benefited: 0 };
           }
         })
       );
+      console.log('Reaction counts:', reactionCountsData);
       return reactionCountsData;
     },
     enabled: !!posts.length,
@@ -492,25 +538,36 @@ const Profile = () => {
   };
 
   const loadMoreJobs = () => {
+    console.log('Loading more jobs, current page:', jobsPage);
     if (hasMoreJobs && !isJobsLoading) {
       setJobsPage((prev) => prev + 1);
     }
   };
 
   const loadMorePosts = () => {
+    console.log('Loading more posts, current page:', postsPage);
     if (hasMorePosts && !isPostsLoading) {
       setPostsPage((prev) => prev + 1);
     }
   };
 
+  // Check if profile failed to load
+  if (profileError || !profileUser) {
+    return (
+      <Center h="100vh">
+        <Text color="red.500">Unable to load profile. Please try again later.</Text>
+      </Center>
+    );
+  }
+
+  // Check if still loading
   if (
     isProfileLoading ||
     isFollowersLoading ||
     isFollowingLoading ||
     isFavoritesLoading ||
     isReactionsLoading ||
-    isReactionCountsLoading ||
-    !profileUser
+    isReactionCountsLoading
   ) {
     return (
       <Center h="100vh">
@@ -678,7 +735,11 @@ const Profile = () => {
         </TabList>
         <TabPanels>
           <TabPanel>
-            {jobs.length === 0 && !isJobsLoading ? (
+            {jobsError ? (
+              <Text textAlign="center" color="red.500">
+                Failed to load jobs. Please try again.
+              </Text>
+            ) : jobs.length === 0 && !isJobsLoading ? (
               <Text textAlign="center">No jobs available yet.</Text>
             ) : (
               <InfiniteScroll
@@ -824,7 +885,11 @@ const Profile = () => {
             )}
           </TabPanel>
           <TabPanel>
-            {posts.length === 0 && !isPostsLoading ? (
+            {postsError ? (
+              <Text textAlign="center" color="red.500">
+                Failed to load posts. Please try again.
+              </Text>
+            ) : posts.length === 0 && !isPostsLoading ? (
               <Text textAlign="center">No posts available yet.</Text>
             ) : (
               <InfiniteScroll
