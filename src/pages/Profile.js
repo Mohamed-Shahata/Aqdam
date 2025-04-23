@@ -499,14 +499,18 @@ const Profile = () => {
     if (!url) return '';
     try {
       const parsedUrl = new URL(url);
-      const path = parsedUrl.pathname;
-      // Extract the username or profile part (e.g., /johndoe -> johndoe)
-      const username = path.split('/').filter(Boolean).pop() || parsedUrl.hostname;
-      return username;
+      const hostname = parsedUrl.hostname.replace('www.', '');
+      const pathParts = parsedUrl.pathname.split('/').filter(Boolean);
+
+
+      const pathPreview = pathParts.slice(0, 2).join('/');
+
+      return `${hostname}/${pathPreview}`;
     } catch {
-      return url; // Fallback to full URL if parsing fails
+      return url;
     }
   };
+
 
   const renderResources = (resources) => {
     const items = stringToList(resources);
@@ -705,7 +709,7 @@ const Profile = () => {
             </Flex>
           )}
           {profileUser?.github_url && (
-            <Flex align="start" as="a" href={profileUser.github_url} target="_blank" rel="noopener noreferrer" color="gray.500" _hover={{ textDecoration: 'underline' }}>
+            <Flex align="start" as="a" href={profileUser.github_url} target="_blank" rel="noopener noreferrer" color="linkedin.500" _hover={{ textDecoration: 'underline' }}>
               <FaGithub size={20} />
               <Text ml={2} fontSize="sm">{getDisplayText(profileUser.github_url)}</Text>
             </Flex>
