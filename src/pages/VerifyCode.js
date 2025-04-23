@@ -1,18 +1,20 @@
-import React, { useState } from 'react'
-import { useNavigate } from "react-router-dom"
-import { Box, Button, FormControl, FormLabel, Heading, Input, Text, useColorModeValue, useToast } from "@chakra-ui/react"
-import Cookies from "js-cookie"
-import api from "../api"
+import React, { useState } from 'react';
+import { useNavigate } from "react-router-dom";
+import { Box, Button, FormControl, FormLabel, Heading, Input, Text, useColorModeValue, useToast } from "@chakra-ui/react";
+import Cookies from "js-cookie";
+import api from "../api";
 
 function VerifyCode() {
   const [code, setCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // أضفنا state للـ loading
   const navigate = useNavigate();
-  const toast = useToast()
+  const toast = useToast();
   const bg = useColorModeValue("white", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.600");
 
   const handlerSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true); // نبدأ التحميل
     const email = Cookies.get('registerEmail');
     if (!email) {
       toast({
@@ -22,9 +24,10 @@ function VerifyCode() {
         duration: 5000,
         isClosable: true
       });
-      navigate("/register")
+      setIsLoading(false); // نوقف التحميل لو مافيش email
+      navigate("/register");
       return;
-    };
+    }
 
     try {
       const response = await api.post(`/auth/verify-code`, {
@@ -39,8 +42,8 @@ function VerifyCode() {
           duration: 5000,
           isClosable: true
         });
-        Cookies.remove("registerEmail")
-        navigate("/login")
+        Cookies.remove("registerEmail");
+        navigate("/login");
       }
     } catch (error) {
       toast({
@@ -51,8 +54,8 @@ function VerifyCode() {
         isClosable: true
       });
     }
-  }
-
+    setIsLoading(false); // نوقف التحميل بعد ما الطلب يخلّص
+  };
 
   return (
     <Box
@@ -80,10 +83,17 @@ function VerifyCode() {
             required
           />
         </FormControl>
-        <Button colorScheme='teal' width="full" type="submit">Proccess</Button>
+        <Button
+          colorScheme='teal'
+          width="full"
+          type="submit"
+          isLoading={isLoading} // أضفنا isLoading للـ Button
+        >
+          Process
+        </Button>
       </form>
     </Box>
-  )
+  );
 }
 
-export default VerifyCode
+export default VerifyCode;
