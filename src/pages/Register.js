@@ -52,7 +52,7 @@ function Register() {
 
   return (
     <Box
-      maxW="600px"
+      maxW={{ base: "90%", md: "600px" }}
       mx="auto"
       mt="100px"
       p={6}
@@ -107,8 +107,8 @@ function Register() {
               placeholder='Select gender'
               required
             >
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
             </Select>
           </FormControl>
           <FormControl>
