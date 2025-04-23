@@ -34,7 +34,6 @@ import {
   Menu,
   ModalHeader,
   Icon,
-  HStack,
 } from '@chakra-ui/react';
 import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../AuthContext';
@@ -694,19 +693,19 @@ const Profile = () => {
         )}
         <VStack spacing={4} align="start">
           {profileUser?.facebook_url && (
-            <Flex align="center" as="a" href={profileUser.facebook_url} target="_blank" rel="noopener noreferrer" color="facebook.500" _hover={{ textDecoration: 'underline' }}>
+            <Flex align="start" as="a" href={profileUser.facebook_url} target="_blank" rel="noopener noreferrer" color="facebook.500" _hover={{ textDecoration: 'underline' }}>
               <FaFacebook size={20} />
               <Text ml={2} fontSize="sm">{getDisplayText(profileUser.facebook_url)}</Text>
             </Flex>
           )}
           {profileUser?.linkedin_url && (
-            <Flex align="center" as="a" href={profileUser.linkedin_url} target="_blank" rel="noopener noreferrer" color="linkedin.500" _hover={{ textDecoration: 'underline' }}>
+            <Flex align="start" as="a" href={profileUser.linkedin_url} target="_blank" rel="noopener noreferrer" color="linkedin.500" _hover={{ textDecoration: 'underline' }}>
               <FaLinkedin size={20} />
               <Text ml={2} fontSize="sm">{getDisplayText(profileUser.linkedin_url)}</Text>
             </Flex>
           )}
           {profileUser?.github_url && (
-            <Flex align="center" as="a" href={profileUser.github_url} target="_blank" rel="noopener noreferrer" color="gray.500" _hover={{ textDecoration: 'underline' }}>
+            <Flex align="start" as="a" href={profileUser.github_url} target="_blank" rel="noopener noreferrer" color="gray.500" _hover={{ textDecoration: 'underline' }}>
               <FaGithub size={20} />
               <Text ml={2} fontSize="sm">{getDisplayText(profileUser.github_url)}</Text>
             </Flex>
