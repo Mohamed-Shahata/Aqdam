@@ -13,6 +13,7 @@ import {
   InputGroup,
   InputRightElement,
   IconButton,
+  Icon,
 } from '@chakra-ui/react';
 import { SearchIcon } from '@chakra-ui/icons';
 import React, { useContext, useState } from 'react';
@@ -147,6 +148,11 @@ const Users = () => {
     }
   };
 
+  const truncateText = (text, maxLength) => {
+    if (!text || text.length <= maxLength) return text;
+    return text.slice(0, maxLength) + '...';
+  };
+
   if (isFollowingLoading || isUsersLoading) {
     return (
       <Container maxW="container.md" py={8}>
@@ -214,11 +220,39 @@ const Users = () => {
                   <Box>
                     <Link to={`/profile/${userItem.id}`}>
                       <Text fontWeight="bold" color="teal.500" _hover={{ textDecoration: 'underline' }}>
-                        {userItem.firstName} {userItem.lastName}
+                        {userItem.firstName} {userItem.lastName} {userItem?.point >= 100 && (
+                          <Icon
+                            as={
+                              profileUser.point >= 10000
+                                ? FaCrown
+                                : profileUser.point >= 1000
+                                  ? FaGem
+                                  : IoSparkles
+                            }
+                            ml={2}
+                            mb={-1}
+                            color={
+                              profileUser.point >= 10000
+                                ? 'yellow.500'
+                                : profileUser.point >= 1000
+                                  ? 'purple.400'
+                                  : 'blue.500'
+                            }
+                            boxSize={profileUser.point >= 10000 ? 7 : profileUser.point >= 1000 ? 6 : 6}
+                            transition="color 0.2s"
+                            aria-label={
+                              profileUser.point >= 10000
+                                ? 'Elite Badge'
+                                : profileUser.point >= 1000
+                                  ? 'Pro Badge'
+                                  : 'Verified Badge'
+                            }
+                          />
+                        )}
                       </Text>
                     </Link>
                     <Text fontSize="sm" color={textColor}>
-                      {userItem.bio || 'No bio available'}
+                      {userItem.bio ? truncateText(userItem.bio, 50) : 'No bio available'}
                     </Text>
                   </Box>
                 </Flex>
