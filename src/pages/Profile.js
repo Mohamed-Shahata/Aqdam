@@ -500,16 +500,14 @@ const Profile = () => {
     try {
       const parsedUrl = new URL(url);
       const hostname = parsedUrl.hostname.replace('www.', '');
-      const pathParts = parsedUrl.pathname.split('/').filter(Boolean);
+      const path = parsedUrl.pathname.replace(/^\/+/, '');
 
-
-      const pathPreview = pathParts.slice(0, 2).join('/');
-
-      return `${hostname}/${pathPreview}`;
+      return path ? `${hostname}/${path}` : hostname;
     } catch {
       return url;
     }
   };
+
 
 
   const renderResources = (resources) => {
