@@ -685,17 +685,14 @@ const Profile = () => {
           )}
         </Box>
       </Flex>
-      <VStack align="center" spacing={2} mb={6}>
-        <Text>{profileUser?.bio || ''}</Text>
-      </VStack>
       <VStack align="center" spacing={4} mb={6}>
         <Text>{profileUser?.bio || ''}</Text>
         {profileUser?.occupation && (
-          <Text fontWeight="semibold" color="teal.500">
+          <Text fontWeight="semibold">
             {profileUser.occupation}
           </Text>
         )}
-        <HStack spacing={6} wrap="wrap" justify="center">
+        <VStack spacing={4} align="start">
           {profileUser?.facebook_url && (
             <Flex align="center" as="a" href={profileUser.facebook_url} target="_blank" rel="noopener noreferrer" color="facebook.500" _hover={{ textDecoration: 'underline' }}>
               <FaFacebook size={20} />
@@ -714,7 +711,8 @@ const Profile = () => {
               <Text ml={2} fontSize="sm">{getDisplayText(profileUser.github_url)}</Text>
             </Flex>
           )}
-        </HStack>
+        </VStack>
+
       </VStack>
       <Divider mt={6} />
       {isOwnerProfile && (
