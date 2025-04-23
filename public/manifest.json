@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
+  "short_name": "AQ",
   "name": "Create React App Sample",
+  "icons": "aq.jpeg",
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#000000",
