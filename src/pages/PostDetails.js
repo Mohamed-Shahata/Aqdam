@@ -283,7 +283,13 @@ const PostDetails = () => {
           </Menu>
         )}
         <Flex align="center" mb={6}>
-          <Avatar size="md" src={post.user?.profileImage || post.user?.gender === 'male' ? maleProfile : femaleProfile} mr={3} />
+          <Avatar size="md" src={
+            post.user?.profileImage
+              ? post.user.profileImage
+              : post.user?.gender === 'male'
+                ? maleProfile
+                : femaleProfile
+          } mr={3} />
           <Box>
             <Link
               as={RouterLink}

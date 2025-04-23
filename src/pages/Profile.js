@@ -596,7 +596,13 @@ const Profile = () => {
       <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'start' }} mb={6}>
         <Avatar
           size="xl"
-          src={profileUser?.profileImage || profileUser?.gender === 'male' ? maleProfile : femaleProfile}
+          src={
+            profileUser?.profileImage
+              ? profileUser.profileImage
+              : profileUser?.gender === 'male'
+                ? maleProfile
+                : femaleProfile
+          }
           mb={{ base: 4, md: 0 }}
           cursor={profileUser?.profileImage ? 'pointer' : 'default'}
           onClick={profileUser?.profileImage ? onImageOpen : undefined}

@@ -501,7 +501,13 @@ const Home = () => {
                     </>
                   )}
                   <Flex align="center" mb={6}>
-                    <Avatar size="md" src={item.user?.profileImage || item.user?.gender === 'male' ? maleProfile : femaleProfile} mr={3} />
+                    <Avatar size="md" src={
+                      item.user?.profileImage
+                        ? item.user.profileImage
+                        : item.user?.gender === 'male'
+                          ? maleProfile
+                          : femaleProfile
+                    } mr={3} />
                     <Box>
                       <Link
                         as={RouterLink}
@@ -607,7 +613,13 @@ const Home = () => {
                     </Menu>
                   )}
                   <Flex align="center" mb={6}>
-                    <Avatar size="md" src={item.user?.profileImage} mr={3} />
+                    <Avatar size="md" src={
+                      item.user?.profileImage
+                        ? item.user.profileImage
+                        : item.user?.gender === 'male'
+                          ? maleProfile
+                          : femaleProfile
+                    } mr={3} />
                     <Box>
                       <Link
                         as={RouterLink}

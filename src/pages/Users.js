@@ -219,7 +219,13 @@ const Users = () => {
               >
                 <Flex align="center">
                   <Link to={`/profile/${userItem.id}`}>
-                    <Avatar size="md" src={userItem?.profileImage || userItem?.gender === 'male' ? maleProfile : femaleProfile} mr={3} />
+                    <Avatar size="md" src={
+                      userItem?.profileImage
+                        ? userItem.profileImage
+                        : userItem?.gender === 'male'
+                          ? maleProfile
+                          : femaleProfile
+                    } mr={3} />
                   </Link>
                   <Box>
                     <Link to={`/profile/${userItem.id}`}>

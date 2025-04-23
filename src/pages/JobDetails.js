@@ -284,7 +284,13 @@ const JobDetails = () => {
 
         {/* User Info with Date */}
         <Flex align="center" mb={4}>
-          <Avatar size="md" src={job.user?.profileImage || job.user?.gender === 'male' ? maleProfile : femaleProfile} mr={3} />
+          <Avatar size="md" src={
+            job.user?.profileImage
+              ? job.user.profileImage
+              : job.user?.gender === 'male'
+                ? maleProfile
+                : femaleProfile
+          } mr={3} />
           <Box>
             <Link
               as={RouterLink}
