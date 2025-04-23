@@ -125,12 +125,12 @@ const Profile = () => {
   const isFollowing = followers.some((follower) => Number(follower.id) === Number(user?.id));
 
   // Fetch user's jobs with pagination
-  const { data: jobsData = [], isLoading: isJobsLoading, error: jobsError } = useQuery({
+  const { data: jobsResponse, isLoading: isJobsLoading, error: jobsError } = useQuery({
     queryKey: ['jobs', profileUser?.id, jobsPage],
     queryFn: async () => {
       const response = await api.get(`/jobs/user/${Number(profileUser.id)}?page=${jobsPage}&limit=${limit}`);
       console.log('Jobs API response:', response.data);
-      return response.data.data;
+      return response.data; // Return the full response object
     },
     enabled: !!profileUser?.id,
     staleTime: 5 * 60 * 1000,
@@ -148,12 +148,12 @@ const Profile = () => {
   });
 
   // Fetch user's posts with pagination
-  const { data: postsData = [], isLoading: isPostsLoading, error: postsError } = useQuery({
+  const { data: postsResponse, isLoading: isPostsLoading, error: postsError } = useQuery({
     queryKey: ['posts', profileUser?.id, postsPage],
     queryFn: async () => {
       const response = await api.get(`/posts/user/${Number(profileUser.id)}?page=${postsPage}&limit=${limit}`);
       console.log('Posts API response:', response.data);
-      return response.data.data;
+      return response.data; // Return the full response object
     },
     enabled: !!profileUser?.id,
     staleTime: 5 * 60 * 1000,
@@ -170,36 +170,37 @@ const Profile = () => {
     },
   });
 
-  // Update jobs and posts when new data is fetched
+  // Update jobs when new data is fetched
   useEffect(() => {
-    console.log('Jobs data:', jobsData);
-    if (jobsData?.length > 0) {
+    console.log('Jobs response:', jobsResponse);
+    if (jobsResponse?.data?.length > 0) {
       setJobs((prev) => {
-        const newJobs = [...prev, ...jobsData];
+        const newJobs = [...prev, ...jobsResponse.data];
         const uniqueJobs = Array.from(new Map(newJobs.map((job) => [job.id, job])).values());
         console.log('Updated jobs:', uniqueJobs);
         return uniqueJobs;
       });
-      setHasMoreJobs(jobsData.length === limit);
+      setHasMoreJobs(jobsResponse.currentPage < jobsResponse.totalPages);
     } else {
       setHasMoreJobs(false);
     }
-  }, [jobsData]);
+  }, [jobsResponse]);
 
+  // Update posts when new data is fetched
   useEffect(() => {
-    console.log('Posts data:', postsData);
-    if (postsData?.length > 0) {
+    console.log('Posts response:', postsResponse);
+    if (postsResponse?.data?.length > 0) {
       setPosts((prev) => {
-        const newPosts = [...prev, ...postsData];
+        const newPosts = [...prev, ...postsResponse.data];
         const uniquePosts = Array.from(new Map(newPosts.map((post) => [post.id, post])).values());
         console.log('Updated posts:', uniquePosts);
         return uniquePosts;
       });
-      setHasMorePosts(postsData.length === limit);
+      setHasMorePosts(postsResponse.currentPage < postsResponse.totalPages);
     } else {
       setHasMorePosts(false);
     }
-  }, [postsData]);
+  }, [postsResponse]);
 
   // Fetch user's job favorites
   const { data: favorites = [], isLoading: isFavoritesLoading, refetch } = useQuery({
