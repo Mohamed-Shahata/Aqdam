@@ -151,7 +151,7 @@ const Profile = () => {
   const { data: postsResponse, isLoading: isPostsLoading, error: postsError } = useQuery({
     queryKey: ['posts', profileUser?.id, postsPage],
     queryFn: async () => {
-      const response = await api.get(`/posts/user/${Number(profileUser.id)}?page=${postsPage}&limit=${limit}`);
+      const response = await api.get(`/posts/user/${Number(profileUser.id)}`);
       console.log('Posts API response:', response.data);
       return response.data; // Return the full response object
     },
