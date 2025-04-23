@@ -581,6 +581,7 @@ const Profile = () => {
 
   return (
     <Container maxW="container.md" py={8}>
+      <Heading>Hello world</Heading>
       {isOwnerProfile && (
         <Flex justifyContent="space-between" mb={4}>
           <Box />
