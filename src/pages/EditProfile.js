@@ -15,7 +15,11 @@ function EditProfile() {
     firstName: '',
     lastName: '',
     bio: '',
-    age: ''
+    age: '',
+    facebookUrl: '',
+    linkedinUrl: '',
+    githubUrl: '',
+    occupation: ''
   });
 
   const [newAvatar, setNewAvatar] = useState(user.profileImage);
@@ -32,7 +36,11 @@ function EditProfile() {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         bio: user.bio || '',
-        age: user.age || ''
+        age: user.age || '',
+        facebookUrl: user.facebookUrl || '',
+        linkedinUrl: user.linkedinUrl || '',
+        githubUrl: user.githubUrl || '',
+        occupation: user.occupation || ''
       });
       setNewAvatar(user.profileImage || null);
     }
@@ -41,7 +49,6 @@ function EditProfile() {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file type and size
       const validTypes = ['image/jpeg', 'image/png'];
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (!validTypes.includes(file.type)) {
@@ -84,7 +91,6 @@ function EditProfile() {
     try {
       const formData = new FormData();
       formData.append('user-image', newAvatar);
-      console.log(formData)
       const token = Cookies.get("token");
       const response = await axios.post("https://aqdambackend-production-0985.up.railway.app/api/users/images/upload-image", formData, {
         withCredentials: true,
@@ -170,6 +176,10 @@ function EditProfile() {
         updateData.lastName = newData.lastName;
       if (newData.bio !== user.bio) updateData.bio = newData.bio;
       if (newData.age !== user.age) updateData.age = Number(newData.age);
+      if (newData.facebook_url !== user.facebookUrl) updateData.facebookUrl = newData.facebookUrl;
+      if (newData.linkedin_url !== user.linkedinUrl) updateData.linkedinUrl = newData.linkedinUrl;
+      if (newData.github_url !== user.githubUrl) updateData.githubUrl = newData.githubUrl;
+      if (newData.occupation !== user.occupation) updateData.occupation = newData.occupation;
 
       if (Object.keys(updateData).length === 0) {
         toast({
@@ -303,6 +313,7 @@ function EditProfile() {
 
       {/* Form Fields */}
       <VStack spacing={6} align="stretch">
+        <Heading size="md" mb={4}>Personal Information</Heading>
         <FormControl>
           <FormLabel>First Name</FormLabel>
           <Input
@@ -352,6 +363,64 @@ function EditProfile() {
             _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px teal.500' }}
           />
         </FormControl>
+
+        {/* Social Links Section */}
+        <Heading size="md" mt={8} mb={4}>Edit Social Links</Heading>
+        <FormControl>
+          <FormLabel>Facebook URL</FormLabel>
+          <Input
+            type="url"
+            value={newData.facebookUrl}
+            onChange={(e) => setNewData({ ...newData, facebookUrl: e.target.value })}
+            placeholder="https://facebook.com/your-profile"
+            bg={bg}
+            borderRadius="md"
+            isDisabled={isUpdating}
+            _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px teal.500' }}
+          />
+        </FormControl>
+        <FormControl>
+          <FormLabel>LinkedIn URL</FormLabel>
+          <Input
+            type="url"
+            value={newData.linkedinUrl}
+            onChange={(e) => setNewData({ ...newData, linkedinUrl: e.target.value })}
+            placeholder="https://linkedin.com/in/your-profile"
+            bg={bg}
+            borderRadius="md"
+            isDisabled={isUpdating}
+            _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px teal.500' }}
+          />
+        </FormControl>
+        <FormControl>
+          <FormLabel>GitHub URL</FormLabel>
+          <Input
+            type="url"
+            value={newData.githubUrl}
+            onChange={(e) => setNewData({ ...newData, githubUrl: e.target.value })}
+            placeholder="https://github.com/your-profile"
+            bg={bg}
+            borderRadius="md"
+            isDisabled={isUpdating}
+            _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px teal.500' }}
+          />
+        </FormControl>
+
+        {/* Occupation Section */}
+        <Heading size="md" mt={8} mb={4}>Job or Company</Heading>
+        <FormControl>
+          <FormLabel>Occupation or Company Name</FormLabel>
+          <Input
+            value={newData.occupation}
+            onChange={(e) => setNewData({ ...newData, occupation: e.target.value })}
+            placeholder="e.g., Software Engineer at XYZ Corp"
+            bg={bg}
+            borderRadius="md"
+            isDisabled={isUpdating}
+            _focus={{ borderColor: 'teal.500', boxShadow: '0 0 0 1px teal.500' }}
+          />
+        </FormControl>
+
         <Flex justify="space-between" mt={6}>
           <Button
             colorScheme="teal"
