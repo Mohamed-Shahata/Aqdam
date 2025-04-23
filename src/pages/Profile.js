@@ -128,6 +128,7 @@ const Profile = () => {
     queryKey: ['posts', profileUser?.id, postsPage],
     queryFn: async () => {
       const response = await api.get(`/posts/user/${Number(profileUser.id)}?page=${postsPage}&limit=${limit}`);
+      console.log("posts", response.data)
       return response.data;
     },
     enabled: !!profileUser?.id,
