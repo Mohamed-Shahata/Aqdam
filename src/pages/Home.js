@@ -144,46 +144,72 @@ const Home = () => {
         await api.post(`/posts/${postId}/reaction`, { type });
       }
     },
-    onSuccess: (_, { postId, type }) => {
-      const currentReaction = userReactions[postId];
+    onMutate: async ({ postId, type }) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries(['userReactions', user?.id]);
+      await queryClient.cancelQueries(['reactionCounts']);
+
+      // Snapshot the previous values for rollback in case of error
+      const previousReactions = queryClient.getQueryData(['userReactions', user?.id]);
+      const previousCounts = queryClient.getQueryData(['reactionCounts']);
+
+      // Optimistically update userReactions
       queryClient.setQueryData(['userReactions', user?.id], (old) => {
         const newReactions = { ...old };
+        const currentReaction = old[postId];
         if (currentReaction === type) {
-          delete newReactions[postId];
+          delete newReactions[postId]; // Remove reaction if same type
         } else {
-          newReactions[postId] = type;
+          newReactions[postId] = type; // Set new reaction
         }
         return newReactions;
       });
+
+      // Optimistically update reactionCounts
       queryClient.setQueryData(['reactionCounts'], (old) => {
         const currentCounts = old?.[postId] || { benefited: 0, not_benefited: 0 };
+        const currentReaction = previousReactions[postId];
+
         return {
           ...old,
           [postId]: {
             benefited:
               type === 'benefited'
-                ? currentCounts.benefited + 1
+                ? currentCounts.benefited + 1 // Increment if new benefited
                 : currentReaction === 'benefited'
-                  ? currentCounts.benefited - 1
+                  ? currentCounts.benefited - 1 // Decrement if removing benefited
                   : currentCounts.benefited,
             not_benefited:
               type === 'not_benefited'
-                ? currentCounts.not_benefited + 1
+                ? currentCounts.not_benefited + 1 // Increment if new not_benefited
                 : currentReaction === 'not_benefited'
-                  ? currentCounts.not_benefited - 1
+                  ? currentCounts.not_benefited - 1 // Decrement if removing not_benefited
                   : currentCounts.not_benefited,
           },
         };
       });
+
+      // Return context with previous values for rollback
+      return { previousReactions, previousCounts };
+    },
+    onSuccess: (_, { postId, type }) => {
+      // Show success toast
+      const currentReaction = userReactions[postId];
       toast({
         title: 'Success',
-        description: currentReaction === type ? 'Reaction removed.' : `Marked as ${type === 'benefited' ? 'Benefited' : 'Not Benefited'}.`,
+        description:
+          currentReaction === type ? 'Reaction removed.' : `Marked as ${type === 'benefited' ? 'Benefited' : 'Not Benefited'}.`,
         status: 'success',
         duration: 5000,
         isClosable: true,
       });
     },
-    onError: (error) => {
+    onError: (error, { postId }, context) => {
+      // Revert to previous state on error
+      queryClient.setQueryData(['userReactions', user?.id], context.previousReactions);
+      queryClient.setQueryData(['reactionCounts'], context.previousCounts);
+
+      // Show error toast
       toast({
         title: 'Error',
         description: error.response?.data?.message || 'Failed to manage reaction.',
@@ -192,7 +218,17 @@ const Home = () => {
         isClosable: true,
       });
     },
+    onSettled: () => {
+      // Optionally refetch to ensure consistency (if needed)
+      queryClient.invalidateQueries(['userReactions', user?.id]);
+      queryClient.invalidateQueries(['reactionCounts']);
+    },
   });
+
+  const handleReaction = (postId, type) => {
+    reactionMutation.mutate({ postId, type });
+  };
+
 
   // Mutation for handling favorites
   const favoriteMutation = useMutation({
@@ -290,9 +326,6 @@ const Home = () => {
     },
   });
 
-  const handleReaction = (postId, type) => {
-    reactionMutation.mutate({ postId, type });
-  };
 
   const handleFavorite = (jobId) => {
     favoriteMutation.mutate(jobId);
