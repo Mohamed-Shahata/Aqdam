@@ -24,6 +24,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
 import { useColorModeValue } from '@chakra-ui/react';
+import Cookies from "js-cookie"
+
 
 const CreatePost = () => {
   const { user } = useContext(AuthContext);
@@ -42,6 +44,7 @@ const CreatePost = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const token = Cookies.get("token");
   // Fetch post data for edit mode
   useEffect(() => {
     if (id) {
@@ -113,7 +116,12 @@ const CreatePost = () => {
 
       if (id) {
         // Update post
-        await api.patch(`/posts/${id}`, payload);
+        await api.patch(`/posts/${id}`, payload, {
+          withCredentials: true,
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         toast({
           title: 'Success',
           description: 'Post updated successfully.',
@@ -150,7 +158,12 @@ const CreatePost = () => {
   // Handle delete post
   const handleDelete = async () => {
     try {
-      await api.delete(`/posts/${id}`);
+      await api.delete(`/posts/${id}`, {
+        withCredentials: true,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       toast({
         title: 'Success',
         description: 'Post deleted successfully.',

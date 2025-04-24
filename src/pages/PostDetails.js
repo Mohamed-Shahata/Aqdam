@@ -41,6 +41,8 @@ const PostDetails = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const textColor = useColorModeValue('gray.600', 'gray.300');
 
+
+
   // Fetch post details
   const { data: post, isLoading: isPostLoading } = useQuery({
     queryKey: ['post', id],
