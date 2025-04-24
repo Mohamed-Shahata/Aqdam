@@ -25,6 +25,7 @@ import api from '../api';
 import { AuthContext } from '../AuthContext';
 import { useColorModeValue } from '@chakra-ui/react';
 import Cookies from "js-cookie"
+import axios from 'axios';
 
 
 const CreatePost = () => {
@@ -116,7 +117,7 @@ const CreatePost = () => {
 
       if (id) {
         // Update post
-        await api.patch(`/posts/${id}`, payload, {
+        await axios.patch(`https://aqdambackend-production-0985.up.railway.app/api/posts/${id}`, payload, {
           withCredentials: true,
           headers: {
             'Authorization': `Bearer ${token}`
@@ -158,7 +159,7 @@ const CreatePost = () => {
   // Handle delete post
   const handleDelete = async () => {
     try {
-      await api.delete(`/posts/${id}`, {
+      await axios.delete(`https://aqdambackend-production-0985.up.railway.app/api/posts/${id}`, {
         withCredentials: true,
         headers: {
           'Authorization': `Bearer ${token}`
