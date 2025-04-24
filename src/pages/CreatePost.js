@@ -49,6 +49,18 @@ const CreatePost = () => {
   useEffect(() => {
     if (id) {
       const fetchPost = async () => {
+        if (!token) {
+          toast({
+            title: 'خطأ',
+            description: 'التوكن غير موجود. من فضلك سجلي دخول.',
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          });
+          navigate('/login');
+          return;
+        }
+
         setIsLoading(true);
         try {
           const response = await api.get(`/posts/${id}`, {
@@ -62,8 +74,8 @@ const CreatePost = () => {
         } catch (error) {
           console.error('Fetch Post Error:', error);
           toast({
-            title: 'Error',
-            description: error.response?.data?.message || 'Failed to fetch post.',
+            title: 'خطأ',
+            description: error.response?.data?.message || 'فشل جلب البوست.',
             status: 'error',
             duration: 5000,
             isClosable: true,
@@ -73,18 +85,7 @@ const CreatePost = () => {
           setIsLoading(false);
         }
       };
-      if (token) {
-        fetchPost();
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Authentication token is missing. Please log in.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        navigate('/login');
-      }
+      fetchPost();
     }
   }, [id, toast, navigate, token]);
 
@@ -98,8 +99,8 @@ const CreatePost = () => {
   // Validate form
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.title.trim()) newErrors.title = 'Title is required';
-    if (!formData.content.trim()) newErrors.content = 'Content is required';
+    if (!formData.title.trim()) newErrors.title = 'العنوان مطلوب';
+    if (!formData.content.trim()) newErrors.content = 'المحتوى مطلوب';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -109,8 +110,8 @@ const CreatePost = () => {
     e.preventDefault();
     if (!validateForm()) {
       toast({
-        title: 'Error',
-        description: 'Please fill in all required fields.',
+        title: 'خطأ',
+        description: 'من فضلك املئي كل الحقول المطلوبة.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -120,8 +121,8 @@ const CreatePost = () => {
 
     if (!token) {
       toast({
-        title: 'Error',
-        description: 'Authentication token is missing. Please log in.',
+        title: 'خطأ',
+        description: 'التوكن غير موجود. من فضلك سجلي دخول.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -144,8 +145,8 @@ const CreatePost = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         toast({
-          title: 'Success',
-          description: 'Post updated successfully.',
+          title: 'نجاح',
+          description: 'تم تعديل البوست بنجاح.',
           status: 'success',
           duration: 5000,
           isClosable: true,
@@ -156,8 +157,8 @@ const CreatePost = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         toast({
-          title: 'Success',
-          description: 'Post created successfully.',
+          title: 'نجاح',
+          description: 'تم إنشاء البوست بنجاح.',
           status: 'success',
           duration: 5000,
           isClosable: true,
@@ -167,8 +168,8 @@ const CreatePost = () => {
     } catch (error) {
       console.error('Submit Error:', error);
       toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to save post.',
+        title: 'خطأ',
+        description: error.response?.data?.message || 'فشل حفظ البوست.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -182,8 +183,8 @@ const CreatePost = () => {
   const handleDelete = async () => {
     if (!token) {
       toast({
-        title: 'Error',
-        description: 'Authentication token is missing. Please log in.',
+        title: 'خطأ',
+        description: 'التوكن غير موجود. من فضلك سجلي دخول.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -197,8 +198,8 @@ const CreatePost = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast({
-        title: 'Success',
-        description: 'Post deleted successfully.',
+        title: 'نجاح',
+        description: 'تم حذف البوست بنجاح.',
         status: 'success',
         duration: 5000,
         isClosable: true,
@@ -207,8 +208,8 @@ const CreatePost = () => {
     } catch (error) {
       console.error('Delete Error:', error);
       toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to delete post.',
+        title: 'خطأ',
+        description: error.response?.data?.message || 'فشل حذف البوست.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -225,7 +226,7 @@ const CreatePost = () => {
   if (!user) {
     return (
       <Container maxW="container.md" py={8}>
-        <Heading size="lg">Please log in to create a post.</Heading>
+        <Heading size="lg">من فضلك سجلي دخول لإنشاء بوست.</Heading>
       </Container>
     );
   }
@@ -243,7 +244,7 @@ const CreatePost = () => {
   return (
     <Container maxW="container.md" py={8}>
       <VStack spacing={6} align="stretch">
-        <Heading size="lg">{id ? 'Edit Educational Post' : 'Create Educational Post'}</Heading>
+        <Heading size="lg">{id ? 'تعديل بوست تعليمي' : 'إنشاء بوست تعليمي'}</Heading>
         <Box
           p={6}
           borderWidth={1}
@@ -256,12 +257,12 @@ const CreatePost = () => {
             <VStack spacing={4}>
               {/* Title */}
               <FormControl isInvalid={!!errors.title} isRequired>
-                <FormLabel>Title</FormLabel>
+                <FormLabel>العنوان</FormLabel>
                 <Textarea
                   name="title"
                   value={formData.title}
                   onChange={handleChange}
-                  placeholder="Enter the title of the post"
+                  placeholder="أدخلي عنوان البوست"
                   rows={2}
                 />
                 <FormErrorMessage>{errors.title}</FormErrorMessage>
@@ -269,12 +270,12 @@ const CreatePost = () => {
 
               {/* Content */}
               <FormControl isInvalid={!!errors.content} isRequired>
-                <FormLabel>Content</FormLabel>
+                <FormLabel>المحتوى</FormLabel>
                 <Textarea
                   name="content"
                   value={formData.content}
                   onChange={handleChange}
-                  placeholder="Enter the main content"
+                  placeholder="أدخلي المحتوى الرئيسي"
                   rows={8}
                 />
                 <FormErrorMessage>{errors.content}</FormErrorMessage>
@@ -282,12 +283,12 @@ const CreatePost = () => {
 
               {/* Resources */}
               <FormControl>
-                <FormLabel>Resources (Optional)</FormLabel>
+                <FormLabel>الموارد (اختياري)</FormLabel>
                 <Textarea
                   name="resources"
                   value={formData.resources}
                   onChange={handleChange}
-                  placeholder="Enter resources or links (optional)"
+                  placeholder="أدخلي الموارد أو الروابط (اختياري)"
                   rows={4}
                 />
               </FormControl>
@@ -298,13 +299,13 @@ const CreatePost = () => {
                   type="submit"
                   colorScheme="teal"
                   isLoading={isSubmitting}
-                  loadingText={id ? 'Updating...' : 'Creating...'}
+                  loadingText={id ? 'جاري التعديل...' : 'جاري الإنشاء...'}
                 >
-                  {id ? 'Update Post' : 'Create Post'}
+                  {id ? 'تعديل البوست' : 'إنشاء البوست'}
                 </Button>
                 {id && (
                   <Button colorScheme="red" variant="outline" onClick={openDeleteModal}>
-                    Delete Post
+                    حذف البوست
                   </Button>
                 )}
               </Flex>
@@ -317,17 +318,17 @@ const CreatePost = () => {
       <Modal isOpen={isDeleteModalOpen} onClose={closeDeleteModal} isCentered>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Confirm Deletion</ModalHeader>
+          <ModalHeader>تأكيد الحذف</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <p>Are you sure you want to delete this post?</p>
+            <p>هل أنتِ متأكدة من حذف هذا البوست؟</p>
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={closeDeleteModal}>
-              Cancel
+              إلغاء
             </Button>
             <Button colorScheme="red" onClick={handleDelete}>
-              Confirm
+              تأكيد
             </Button>
           </ModalFooter>
         </ModalContent>
