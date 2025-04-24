@@ -16,6 +16,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 import { Link as RouterLink } from 'react-router-dom';
+import maleProfile from "../pages/gender/male.jpg";
+import femaleProfile from "../pages/gender/female.jpg";
 
 function FollowList() {
   const { type, id } = useParams(); // 'followers' or 'following'
@@ -75,7 +77,12 @@ function FollowList() {
               to={`/profile/${user.id}`}
             >
               <Flex align="center">
-                <Avatar size="md" src={user.profileImage} mr={4} />
+                <Avatar size="md" src={
+                  user?.profileImage
+                    ? user.profileImage
+                    : user?.gender === 'male'
+                      ? maleProfile
+                      : femaleProfile} mr={4} />
                 <Box>
                   <Text fontWeight="bold">
                     {user.firstName} {user.lastName}
