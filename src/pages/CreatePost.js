@@ -24,7 +24,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
 import { useColorModeValue } from '@chakra-ui/react';
-import Cookies from 'js-cookie';
 
 const CreatePost = () => {
   const { user } = useContext(AuthContext);
@@ -43,29 +42,13 @@ const CreatePost = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const token = Cookies.get('token');
-
   // Fetch post data for edit mode
   useEffect(() => {
     if (id) {
       const fetchPost = async () => {
-        if (!token) {
-          toast({
-            title: 'خطأ',
-            description: 'التوكن غير موجود. من فضلك سجلي دخول.',
-            status: 'error',
-            duration: 5000,
-            isClosable: true,
-          });
-          navigate('/login');
-          return;
-        }
-
         setIsLoading(true);
         try {
-          const response = await api.get(`/posts/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const response = await api.get(`/posts/${id}`);
           setFormData({
             title: response.data.title || '',
             content: response.data.content || '',
@@ -74,8 +57,8 @@ const CreatePost = () => {
         } catch (error) {
           console.error('Fetch Post Error:', error);
           toast({
-            title: 'خطأ',
-            description: error.response?.data?.message || 'فشل جلب البوست.',
+            title: 'Error',
+            description: error.response?.data?.message || 'Failed to fetch post.',
             status: 'error',
             duration: 5000,
             isClosable: true,
@@ -87,20 +70,21 @@ const CreatePost = () => {
       };
       fetchPost();
     }
-  }, [id, toast, navigate, token]);
+  }, [id, toast, navigate]);
 
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error for this field
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   // Validate form
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.title.trim()) newErrors.title = 'العنوان مطلوب';
-    if (!formData.content.trim()) newErrors.content = 'المحتوى مطلوب';
+    if (!formData.title.trim()) newErrors.title = 'Title is required';
+    if (!formData.content.trim()) newErrors.content = 'Content is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -110,24 +94,12 @@ const CreatePost = () => {
     e.preventDefault();
     if (!validateForm()) {
       toast({
-        title: 'خطأ',
-        description: 'من فضلك املئي كل الحقول المطلوبة.',
+        title: 'Error',
+        description: 'Please fill in all required fields.',
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
-      return;
-    }
-
-    if (!token) {
-      toast({
-        title: 'خطأ',
-        description: 'التوكن غير موجود. من فضلك سجلي دخول.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-      navigate('/login');
       return;
     }
 
@@ -141,35 +113,31 @@ const CreatePost = () => {
 
       if (id) {
         // Update post
-        await api.patch(`/posts/${id}`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api.patch(`/posts/${id}`, payload);
         toast({
-          title: 'نجاح',
-          description: 'تم تعديل البوست بنجاح.',
+          title: 'Success',
+          description: 'Post updated successfully.',
           status: 'success',
           duration: 5000,
           isClosable: true,
         });
       } else {
         // Create post
-        await api.post('/posts', payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api.post('/posts', payload);
         toast({
-          title: 'نجاح',
-          description: 'تم إنشاء البوست بنجاح.',
+          title: 'Success',
+          description: 'Post created successfully.',
           status: 'success',
           duration: 5000,
           isClosable: true,
         });
       }
-      setTimeout(() => navigate('/home'), 1000); // Delay navigation to show toast
+      navigate('/home'); // Redirect to Home after success
     } catch (error) {
       console.error('Submit Error:', error);
       toast({
-        title: 'خطأ',
-        description: error.response?.data?.message || 'فشل حفظ البوست.',
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to save post.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -181,35 +149,21 @@ const CreatePost = () => {
 
   // Handle delete post
   const handleDelete = async () => {
-    if (!token) {
-      toast({
-        title: 'خطأ',
-        description: 'التوكن غير موجود. من فضلك سجلي دخول.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-      navigate('/login');
-      return;
-    }
-
     try {
-      await api.delete(`/posts/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/posts/${id}`);
       toast({
-        title: 'نجاح',
-        description: 'تم حذف البوست بنجاح.',
+        title: 'Success',
+        description: 'Post deleted successfully.',
         status: 'success',
         duration: 5000,
         isClosable: true,
       });
-      setTimeout(() => navigate('/home'), 1000); // Delay navigation to show toast
+      navigate('/home');
     } catch (error) {
       console.error('Delete Error:', error);
       toast({
-        title: 'خطأ',
-        description: error.response?.data?.message || 'فشل حذف البوست.',
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to delete post.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -226,7 +180,7 @@ const CreatePost = () => {
   if (!user) {
     return (
       <Container maxW="container.md" py={8}>
-        <Heading size="lg">من فضلك سجلي دخول لإنشاء بوست.</Heading>
+        <Heading size="lg">Please log in to create a post.</Heading>
       </Container>
     );
   }
@@ -244,7 +198,7 @@ const CreatePost = () => {
   return (
     <Container maxW="container.md" py={8}>
       <VStack spacing={6} align="stretch">
-        <Heading size="lg">{id ? 'تعديل بوست تعليمي' : 'إنشاء بوست تعليمي'}</Heading>
+        <Heading size="lg">{id ? 'Edit Educational Post' : 'Create Educational Post'}</Heading>
         <Box
           p={6}
           borderWidth={1}
@@ -257,12 +211,12 @@ const CreatePost = () => {
             <VStack spacing={4}>
               {/* Title */}
               <FormControl isInvalid={!!errors.title} isRequired>
-                <FormLabel>العنوان</FormLabel>
+                <FormLabel>Title</FormLabel>
                 <Textarea
                   name="title"
                   value={formData.title}
                   onChange={handleChange}
-                  placeholder="أدخلي عنوان البوست"
+                  placeholder="Enter the title of the post"
                   rows={2}
                 />
                 <FormErrorMessage>{errors.title}</FormErrorMessage>
@@ -270,12 +224,12 @@ const CreatePost = () => {
 
               {/* Content */}
               <FormControl isInvalid={!!errors.content} isRequired>
-                <FormLabel>المحتوى</FormLabel>
+                <FormLabel>Content</FormLabel>
                 <Textarea
                   name="content"
                   value={formData.content}
                   onChange={handleChange}
-                  placeholder="أدخلي المحتوى الرئيسي"
+                  placeholder="Enter the main content"
                   rows={8}
                 />
                 <FormErrorMessage>{errors.content}</FormErrorMessage>
@@ -283,12 +237,12 @@ const CreatePost = () => {
 
               {/* Resources */}
               <FormControl>
-                <FormLabel>الموارد (اختياري)</FormLabel>
+                <FormLabel>Resources (Optional)</FormLabel>
                 <Textarea
                   name="resources"
                   value={formData.resources}
                   onChange={handleChange}
-                  placeholder="أدخلي الموارد أو الروابط (اختياري)"
+                  placeholder="Enter resources or links (optional)"
                   rows={4}
                 />
               </FormControl>
@@ -299,13 +253,13 @@ const CreatePost = () => {
                   type="submit"
                   colorScheme="teal"
                   isLoading={isSubmitting}
-                  loadingText={id ? 'جاري التعديل...' : 'جاري الإنشاء...'}
+                  loadingText={id ? 'Updating...' : 'Creating...'}
                 >
-                  {id ? 'تعديل البوست' : 'إنشاء البوست'}
+                  {id ? 'Update Post' : 'Create Post'}
                 </Button>
                 {id && (
                   <Button colorScheme="red" variant="outline" onClick={openDeleteModal}>
-                    حذف البوست
+                    Delete Post
                   </Button>
                 )}
               </Flex>
@@ -318,17 +272,17 @@ const CreatePost = () => {
       <Modal isOpen={isDeleteModalOpen} onClose={closeDeleteModal} isCentered>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>تأكيد الحذف</ModalHeader>
+          <ModalHeader>Confirm Deletion</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <p>هل أنتِ متأكدة من حذف هذا البوست؟</p>
+            <p>Are you sure you want to delete this post?</p>
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={closeDeleteModal}>
-              إلغاء
+              Cancel
             </Button>
             <Button colorScheme="red" onClick={handleDelete}>
-              تأكيد
+              Confirm
             </Button>
           </ModalFooter>
         </ModalContent>
