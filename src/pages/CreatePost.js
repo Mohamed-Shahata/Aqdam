@@ -24,8 +24,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 import { AuthContext } from '../AuthContext';
 import { useColorModeValue } from '@chakra-ui/react';
-import Cookies from "js-cookie"
-
+import Cookies from 'js-cookie';
 
 const CreatePost = () => {
   const { user } = useContext(AuthContext);
@@ -44,14 +43,17 @@ const CreatePost = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const token = Cookies.get("token");
+  const token = Cookies.get('token');
+
   // Fetch post data for edit mode
   useEffect(() => {
     if (id) {
       const fetchPost = async () => {
         setIsLoading(true);
         try {
-          const response = await api.get(`/posts/${id}`);
+          const response = await api.get(`/posts/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
           setFormData({
             title: response.data.title || '',
             content: response.data.content || '',
@@ -71,15 +73,25 @@ const CreatePost = () => {
           setIsLoading(false);
         }
       };
-      fetchPost();
+      if (token) {
+        fetchPost();
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Authentication token is missing. Please log in.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        navigate('/login');
+      }
     }
-  }, [id, toast, navigate]);
+  }, [id, toast, navigate, token]);
 
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
@@ -106,6 +118,18 @@ const CreatePost = () => {
       return;
     }
 
+    if (!token) {
+      toast({
+        title: 'Error',
+        description: 'Authentication token is missing. Please log in.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      navigate('/login');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const payload = {
@@ -116,7 +140,9 @@ const CreatePost = () => {
 
       if (id) {
         // Update post
-        await api.patch(`/posts/${id}`, payload);
+        await api.patch(`/posts/${id}`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         toast({
           title: 'Success',
           description: 'Post updated successfully.',
@@ -126,7 +152,9 @@ const CreatePost = () => {
         });
       } else {
         // Create post
-        await api.post('/posts', payload);
+        await api.post('/posts', payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         toast({
           title: 'Success',
           description: 'Post created successfully.',
@@ -135,7 +163,7 @@ const CreatePost = () => {
           isClosable: true,
         });
       }
-      navigate('/home'); // Redirect to Home after success
+      setTimeout(() => navigate('/home'), 1000); // Delay navigation to show toast
     } catch (error) {
       console.error('Submit Error:', error);
       toast({
@@ -152,8 +180,22 @@ const CreatePost = () => {
 
   // Handle delete post
   const handleDelete = async () => {
+    if (!token) {
+      toast({
+        title: 'Error',
+        description: 'Authentication token is missing. Please log in.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      navigate('/login');
+      return;
+    }
+
     try {
-      await api.delete(`/posts/${id}`);
+      await api.delete(`/posts/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       toast({
         title: 'Success',
         description: 'Post deleted successfully.',
@@ -161,7 +203,7 @@ const CreatePost = () => {
         duration: 5000,
         isClosable: true,
       });
-      navigate('/home');
+      setTimeout(() => navigate('/home'), 1000); // Delay navigation to show toast
     } catch (error) {
       console.error('Delete Error:', error);
       toast({
